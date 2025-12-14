@@ -18,6 +18,10 @@ all: RG35xx
 endif
 
 # Explicit platform targets
+.PHONY: sdl3
+sdl3:
+	$(MAKE) -f Makefile.sdl3 sdl3
+
 .PHONY: desktop
 desktop:
 	$(MAKE) -f Makefile.desktop desktop

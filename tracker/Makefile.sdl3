@@ -1,0 +1,36 @@
+# Desktop makefile (Linux/macOS)
+
+# Desktop platform identifier
+PLATFORM = sdl3
+
+include Makefile.common
+
+# Desktop-specific settings
+LIBS = $(COMMON_LIBS) platforms/sdl3
+OUTPUT_EXT =
+
+# Platform-specific flags
+ifeq ($(shell uname),Darwin)
+# macOS
+XTRA_CFLAGS = -I/opt/homebrew/include -L/opt/homebrew/lib -DDESKTOP_BUILD
+else
+# Linux
+XTRA_CFLAGS = -I/usr/include -L/usr/lib -DDESKTOP_BUILD
+endif
+
+# Mobile build flag (set MOBILE_BUILD=1 to enable)
+ifdef MOBILE_BUILD
+XTRA_CFLAGS += -DMOBILE_BUILD
+endif
+
+XTRA_LIBS = -lSDL3 -lm
+CFLAGS = $(COMMON_CFLAGS) $(INCLUDES) $(SOURCES) $(XTRA_CFLAGS) -DMOBILE_BUILD
+OUTPUT = -o $(BUILD)/chipnomad$(OUTPUT_EXT)
+
+.PHONY: sdl3
+sdl3:
+	$(call build_target)
+
+.PHONY: sdl3-mobile
+sdl3-mobile:
+	$(MAKE) sdl3 MOBILE_BUILD=1
