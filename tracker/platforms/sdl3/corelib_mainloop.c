@@ -4,9 +4,6 @@
 
 #include "corelib_gfx.h"
 #include "virtual_buttons.h"
-#ifdef MOBILE_BUILD
-#include "virtual_buttons.h"
-#endif
 
 #define FPS 60
 

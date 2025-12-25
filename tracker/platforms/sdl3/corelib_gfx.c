@@ -131,20 +131,20 @@ static void ensureBackBufferTarget(void) {
 }
 
 // Draw a single virtual button
-static void gfxDrawVirtualButton(VirtualButtonRegion *region, int screenW, int screenH) {
+static void gfxDrawVirtualButton(VirtualButtonRegion *region, const int screenWidth, const int screenHeight) {
     if (!region || !renderer) return;
 
     // Convert normalized coordinates to screen coordinates
-    float centerX = region->x * screenW;
-    float centerY = region->y * screenH;
-    float radius = region->radius * (screenW < screenH ? screenW : screenH);
+    const float centerX = region->x * (float)screenWidth;
+    const float centerY = region->y * (float)screenHeight;
+    const float radius = region->radius * (float)(screenWidth < screenHeight ? screenWidth : screenHeight);
 
     // Button colors
-    uint32_t buttonColor = 0x808080; // Gray
-    uint32_t pressedColor = 0x404040; // Darker gray when pressed
-    uint32_t borderColor = 0xFFFFFF; // White border
+    const uint32_t buttonColor = 0x808080; // Gray
+    const uint32_t pressedColor = 0x404040; // Darker gray when pressed
+    const uint32_t borderColor = 0xFFFFFF; // White border
 
-    uint32_t currentColor = region->isPressed ? pressedColor : buttonColor;
+    const uint32_t currentColor = region->isPressed ? pressedColor : buttonColor;
 
     SDL_SetRenderTarget(renderer, buttonOverlay);
 

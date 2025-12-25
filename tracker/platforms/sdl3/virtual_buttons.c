@@ -90,8 +90,8 @@ void virtualButtonsInit(int screenW, int screenH) {
   idx++;
   
   // A button on right side (upper position in button area)
-  float aButtonX = 0.85f;  // 85% from left edge
-  float aButtonY = buttonAreaStartY + buttonAreaHeight * 0.3f;  // Upper third of button area
+  const float aButtonX = 0.85f;  // 85% from left edge
+  const float aButtonY = buttonAreaCenterY - buttonSize/2;  // Upper third of button area
   vbuttons.regions[idx].x = aButtonX;
   vbuttons.regions[idx].y = aButtonY;
   vbuttons.regions[idx].radius = buttonSize;
@@ -100,8 +100,8 @@ void virtualButtonsInit(int screenW, int screenH) {
   idx++;
   
   // B button on right side (lower position in button area, below A)
-  float bButtonX = 0.85f;  // 85% from left edge
-  float bButtonY = buttonAreaStartY + buttonAreaHeight * 0.7f;  // Lower third of button area
+  const float bButtonX = 0.65f;  // 85% from left edge
+  const float bButtonY = buttonAreaCenterY;  // Lower third of button area
   vbuttons.regions[idx].x = bButtonX;
   vbuttons.regions[idx].y = bButtonY;
   vbuttons.regions[idx].radius = buttonSize;
@@ -110,21 +110,21 @@ void virtualButtonsInit(int screenW, int screenH) {
   idx++;
   
   // Start button at bottom center-right
-  float startX = 0.6f;    // Slightly right of center
-  float startY = buttonAreaStartY + buttonAreaHeight * 0.9f;  // Near bottom of button area
+  const float startX = 0.6f;    // Slightly right of center
+  const float startY = buttonAreaStartY + buttonAreaHeight * 0.9f;  // Near bottom of button area
   vbuttons.regions[idx].x = startX;
   vbuttons.regions[idx].y = startY;
-  vbuttons.regions[idx].radius = buttonSize * 0.8f; // Slightly smaller
+  vbuttons.regions[idx].radius = buttonSize; // Slightly smaller
   vbuttons.regions[idx].button = VBUTTON_START;
   vbuttons.regions[idx].isPressed = 0;
   idx++;
   
   // Select button at bottom center-left
-  float selectX = 0.4f;  // Slightly left of center
-  float selectY = buttonAreaStartY + buttonAreaHeight * 0.9f;  // Same height as Start
+  const float selectX = 0.4f;  // Slightly left of center
+  const float selectY = buttonAreaStartY + buttonAreaHeight * 0.9f;  // Same height as Start
   vbuttons.regions[idx].x = selectX;
   vbuttons.regions[idx].y = selectY;
-  vbuttons.regions[idx].radius = buttonSize * 0.8f; // Slightly smaller
+  vbuttons.regions[idx].radius = buttonSize; // Slightly smaller
   vbuttons.regions[idx].button = VBUTTON_SELECT;
   vbuttons.regions[idx].isPressed = 0;
 }
