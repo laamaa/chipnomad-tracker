@@ -4,6 +4,7 @@
 
 #include "corelib_gfx.h"
 #include "virtual_buttons.h"
+#include "haptic_feedback.h"
 
 #define FPS 60
 
@@ -140,6 +141,7 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
             }
             if (touchIndex >= 0) {
               touchKeys[touchIndex] = key;
+              hapticTriggerButtonPress();  // Add haptic feedback
               onEvent(eventKeyDown, key, NULL);
             }
           } else if (touchState == -1) { // Up

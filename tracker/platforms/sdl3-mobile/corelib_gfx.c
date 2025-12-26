@@ -24,6 +24,7 @@ extern uint8_t font48x54[];
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
+SDL_Haptic *hapticDevice = NULL;
 
 static uint32_t fgColor = 0;
 static uint32_t bgColor = 0;
@@ -214,13 +215,32 @@ static void gfxDrawVirtualButtons() {
 #ifdef PORTMASTER_BUILD
 #define SDL_INIT_FLAGS (SDL_INIT_EVERYTHING & ~SDL_INIT_HAPTIC)
 #else
-#define SDL_INIT_FLAGS (SDL_INIT_VIDEO | SDL_INIT_EVENTS)
+#define SDL_INIT_FLAGS (SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_HAPTIC)
 #endif
 
 int gfxSetup(int *screenWidth, int *screenHeight) {
     if (SDL_Init(SDL_INIT_FLAGS) == false) {
         SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "SDL3 Initialization Error: %s\n", SDL_GetError());
         return 1;
+    }
+
+    // Initialize haptic feedback for mobile devices
+    int numHaptics = 0;
+    SDL_HapticID *haptics = SDL_GetHaptics(&numHaptics);
+    if (haptics && numHaptics > 0) {
+        hapticDevice = SDL_OpenHaptic(haptics[0]);
+        if (hapticDevice) {
+            if (SDL_InitHapticRumble(hapticDevice)) {
+                SDL_Log("Haptic feedback initialized successfully");
+            } else {
+                SDL_Log("Failed to initialize haptic rumble: %s", SDL_GetError());
+                SDL_CloseHaptic(hapticDevice);
+                hapticDevice = NULL;
+            }
+        }
+        SDL_free(haptics);
+    } else {
+        SDL_Log("No haptic devices found - vibration feedback disabled");
     }
 
     sprintf(charBuffer, "%s v%s (%s)", appTitle, appVersion, appBuild);
@@ -330,6 +350,10 @@ void gfxCleanup(void) {
     if (buttonOverlay) SDL_DestroyTexture(buttonOverlay);
     if (fontTexture) SDL_DestroyTexture(fontTexture);
     virtualButtonsCleanup();
+    if (hapticDevice) {
+        SDL_CloseHaptic(hapticDevice);
+        hapticDevice = NULL;
+    }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 }

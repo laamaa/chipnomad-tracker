@@ -54,17 +54,17 @@ endif()
 
 # Source directories
 set(COMMON_LIBS_DIRS
-    src
-    ../chipnomad_lib
-    ../chipnomad_lib/chips
-    ../chipnomad_lib/external/ayumi
-    ../chipnomad_lib/export
-    ../chipnomad_lib/corelib_file_stdio
-    src/corelib
-    src/import
-    src/screens
-    platforms/shared
-        platforms/sdl3-mobile
+    tracker/src
+    chipnomad_lib
+    chipnomad_lib/chips
+    chipnomad_lib/external/ayumi
+    chipnomad_lib/export
+    chipnomad_lib/corelib_file_stdio
+    tracker/src/corelib
+    tracker/src/import
+    tracker/src/screens
+    tracker/platforms/shared
+    tracker/platforms/sdl3-mobile
 )
 
 # Collect all source files (non-recursive, matching Makefile behavior)
@@ -75,7 +75,7 @@ endforeach()
 
 # Include directories
 set(INCLUDE_DIRS ${COMMON_LIBS_DIRS})
-list(APPEND INCLUDE_DIRS ../chipnomad_lib)
+list(APPEND INCLUDE_DIRS chipnomad_lib)
 
 # Add include directories
 foreach(dir ${INCLUDE_DIRS})
@@ -127,7 +127,7 @@ endif()
 
 # Set output directory
 set_target_properties(chipnomad PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/sdl3"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/sdl3-mobile"
 )
 
 # Make executable
