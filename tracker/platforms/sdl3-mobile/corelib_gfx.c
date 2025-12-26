@@ -5,6 +5,8 @@
 #include "corelib_gfx.h"
 #include <string.h>
 #include <math.h>
+
+#include "pitch_table_utils.h"
 #include "virtual_buttons.h"
 
 #define PRINT_BUFFER_SIZE (256)
@@ -40,8 +42,8 @@ static int offsetY;
 static int isDirty;
 
 // Fixed backBuffer dimensions
-static const int BACKBUFFER_W = 800;
-static const int BACKBUFFER_H = 600;
+static const int BACKBUFFER_W = 1280;
+static const int BACKBUFFER_H = 960;
 
 static SDL_Texture *backBuffer = NULL;
 static SDL_Texture *buttonOverlay = NULL;
@@ -480,14 +482,16 @@ void gfxUpdateScreen(void) {
     SDL_RenderClear(renderer);
     
     // Calculate horizontal offset to center 640px backBuffer in window
-    float backBufferOffsetX = (windowW - BACKBUFFER_W) / 2.0f;
-    
+    //float backBufferOffsetX = (windowW - BACKBUFFER_W) / 2.0f;
+
     // Render back buffer in top portion (centered horizontally)
+    const float scale = (float)windowW / (float)BACKBUFFER_W;
     SDL_FRect backBufferDst = {
-        backBufferOffsetX,
+        //backBufferOffsetX,
         0.0f,
-        (float)BACKBUFFER_W,
-        (float)BACKBUFFER_H
+        160.0f,
+        (float)windowW,
+        (float)BACKBUFFER_H * scale
     };
     SDL_RenderTexture(renderer, backBuffer, NULL, &backBufferDst);
     

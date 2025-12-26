@@ -2,6 +2,7 @@
 #define __VIRTUAL_BUTTONS_H__
 
 #include "corelib_mainloop.h"
+#include <SDL3/SDL.h>
 
 // Button IDs matching the Key enum
 typedef enum {
@@ -44,7 +45,8 @@ void virtualButtonsInit(int screenW, int screenH);
 void virtualButtonsCleanup();
 
 // Handle touch event (normalized coordinates 0.0-1.0)
-VirtualButton virtualButtonsHandleTouch(float x, float y, int isDown);
+// fingerId: SDL_FingerID to track which finger is pressing the button
+VirtualButton virtualButtonsHandleTouch(float x, float y, int isDown, SDL_FingerID fingerId);
 
 // Get button state
 int virtualButtonsIsPressed(VirtualButton button);

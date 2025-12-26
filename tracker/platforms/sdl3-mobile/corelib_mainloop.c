@@ -104,16 +104,28 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
         SDL_FingerID fingerId = event.tfinger.fingerID;
         float x = event.tfinger.x; // Normalized coordinates (0.0-1.0)
         float y = event.tfinger.y;
-        int isDown = (event.type == SDL_EVENT_FINGER_DOWN);
-        int isUp = (event.type == SDL_EVENT_FINGER_UP);
-        
+
+        // Use 1 for Down, 0 for Motion, -1 for Up
+
+        int touchState = 0;
+        switch (event.type) {
+          case SDL_EVENT_FINGER_DOWN:
+            touchState = 1;
+            break;
+          case SDL_EVENT_FINGER_UP:
+            touchState = -1;
+            break;
+          default:
+            touchState = 0;
+        }
+
         // Handle touch
-        const VirtualButton button = virtualButtonsHandleTouch(x, y, isDown);
-        
-        if (button != VBUTTON_NONE) {
+        const VirtualButton button = virtualButtonsHandleTouch(x, y, touchState, fingerId);
+
+        if (button != VBUTTON_NONE || touchState == -1) {
           enum Key key = (enum Key)button;
-          
-          if (isDown) {
+
+          if (touchState == 1) { // Down
             // Find or add touch tracking
             int touchIndex = -1;
             for (int i = 0; i < numActiveTouches; i++) {
@@ -130,7 +142,7 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
               touchKeys[touchIndex] = key;
               onEvent(eventKeyDown, key, NULL);
             }
-          } else if (isUp) {
+          } else if (touchState == -1) { // Up
             // Find and release touch
             for (int i = 0; i < numActiveTouches; i++) {
               if (activeTouches[i] == fingerId) {

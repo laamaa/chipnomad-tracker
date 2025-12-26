@@ -64,7 +64,7 @@ set(COMMON_LIBS_DIRS
     src/import
     src/screens
     platforms/shared
-    platforms/sdl3
+        platforms/sdl3-mobile
 )
 
 # Collect all source files (non-recursive, matching Makefile behavior)
