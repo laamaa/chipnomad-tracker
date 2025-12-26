@@ -74,7 +74,8 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
   uint32_t busytime = 0;
   SDL_Event event;
   int menu = 0;
-  
+  int isBackgrounded = 0; // Track if app is in background to suspend rendering
+
   // Track active touches for multi-touch support
   SDL_FingerID activeTouches[10]; // Support up to 10 simultaneous touches
   enum Key touchKeys[10]; // Map touch IDs to keys
@@ -86,11 +87,16 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
     while (SDL_PollEvent(&event)) {
       // Handle iOS/mobile lifecycle events
       if (event.type == SDL_EVENT_DID_ENTER_BACKGROUND || event.type == SDL_EVENT_TERMINATING) {
+        isBackgrounded = 1;
         // Save state (app may be terminated soon)
         onEvent(eventExit, 0, NULL);
         if (event.type == SDL_EVENT_TERMINATING) {
           return;
         }
+        continue;
+      }
+      if (event.type == SDL_EVENT_WILL_ENTER_FOREGROUND) {
+        isBackgrounded = 0;
         continue;
       }
 
@@ -175,8 +181,11 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
     }
     onEvent(eventTick, 0, NULL);
 
-    draw();
-    gfxUpdateScreen();
+    // Skip rendering when backgrounded (iOS denies GPU access)
+    if (!isBackgrounded) {
+      draw();
+      gfxUpdateScreen();
+    }
 
     busytime = SDL_GetTicks() - start;
     if (delay > busytime) {
