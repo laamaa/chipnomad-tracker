@@ -45,6 +45,22 @@ static ScreenData screen = {
   .onEdit = onEdit,
 };
 
+static void init(void) {
+  lastPitchValue = 0;
+  lastVolume = 15;
+  lastFX[0] = 0;
+  lastFX[1] = 0;
+  screen.cursorRow = 0;
+  screen.cursorCol = 0;
+  screen.topRow = 0;
+  screen.selectMode = 0;
+  screen.selectStartRow = 0;
+  screen.selectStartCol = 0;
+  screen.selectAnchorRow = 0;
+  screen.selectAnchorCol = 0;
+  isFxEdit = 0;
+}
+
 static void setup(int input) {
   isFxEdit = 0;
   tableIdx = input & 0xff;
@@ -332,7 +348,7 @@ static int inputScreenNavigation(int keys, int isDoubleTap) {
   return 0;
 }
 
-static void onInput(int keys, int isDoubleTap) {
+static int onInput(int isKeyDown, int keys, int isDoubleTap) {
   if (isFxEdit) {
     int fxIdx = (screen.cursorCol - 3) / 2;
     int result = fxEditInput(keys, isDoubleTap, tableRows[screen.cursorRow].fx[fxIdx], lastFX);
@@ -354,16 +370,17 @@ static void onInput(int keys, int isDoubleTap) {
 
       fullRedraw();
     }
-    return;
+    return 1;
   }
 
-  if (screen.selectMode == 0 && inputScreenNavigation(keys, isDoubleTap)) return;
-  screenInput(&screen, keys, isDoubleTap);
+  if (screen.selectMode == 0 && inputScreenNavigation(keys, isDoubleTap)) return 1;
+  return screenInput(&screen, isKeyDown, keys, isDoubleTap);
 }
 
 const AppScreen screenTable = {
   .setup = setup,
   .fullRedraw = fullRedraw,
   .draw = draw,
-  .onInput = onInput
+  .onInput = onInput,
+  .init = init
 };

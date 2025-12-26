@@ -54,6 +54,7 @@ typedef struct PlaybackNoteState {
   int8_t noteOffsetAcc; // Accumulated over time
   int16_t pitchOffset; // Re-calculated each frame
   int16_t pitchOffsetAcc; // Accumulated over time
+  int16_t periodOffsetAcc; // Accumulated period offset
   uint8_t volume1; // Instrument volume
   uint8_t volume2; // Instrument table volume
   uint8_t volume3; // Aux table volume
@@ -133,6 +134,7 @@ typedef struct PlaybackState {
   Project* p;
   PlaybackTrackState tracks[PROJECT_MAX_TRACKS];
   PlaybackChipState chips[PROJECT_MAX_CHIPS];
+  uint8_t trackEnabled[PROJECT_MAX_TRACKS];
 } PlaybackState;
 
 

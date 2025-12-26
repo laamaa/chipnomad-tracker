@@ -24,6 +24,7 @@ static void resetTrack(PlaybackState* state, int trackIdx) {
   track->note.noteOffsetAcc = 0;
   track->note.pitchOffset = 0;
   track->note.pitchOffsetAcc = 0;
+  track->note.periodOffsetAcc = 0;
   track->note.instrument = EMPTY_VALUE_8;
   track->note.volume = 0;
   track->note.volumeOffsetAcc = 0;
@@ -164,6 +165,7 @@ void readPhraseRowDirect(PlaybackState* state, int trackIdx, PhraseRow* phraseRo
     } else {
       track->note.noteBase = note;
       track->note.pitchOffsetAcc = 0;
+      track->note.periodOffsetAcc = 0;
       track->note.noteOffsetAcc = 0;
       track->note.volumeOffsetAcc = 0;
       tableInit(state, trackIdx, &track->note.auxTable, EMPTY_VALUE_8, 1);
@@ -403,6 +405,7 @@ void playbackInit(PlaybackState* state, Project* project) {
     resetTrack(state, c);
     state->tracks[c].queue.mode = playbackModeNone;
     state->tracks[c].queue.loop = 0;
+    state->trackEnabled[c] = 1;
   }
 
   // TODO: Properly initialize other global chip states, but for now it's AY only

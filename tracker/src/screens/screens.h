@@ -6,10 +6,11 @@
 #define MESSAGE_TIME (60)
 
 typedef struct AppScreen {
+  void (*init)(void);
   void (*setup)(int input);
   void (*fullRedraw)(void);
   void (*draw)(void);
-  void (*onInput)(int keys, int isDoubleTap);
+  int (*onInput)(int isKeyDown, int keys, int isDoubleTap); // Return 1 if handled, 0 if not
 } AppScreen;
 
 enum CellState {
@@ -73,6 +74,7 @@ extern const AppScreen screenInstrument;
 extern const AppScreen screenInstrumentPool;
 extern const AppScreen screenTable;
 extern const AppScreen screenExport;
+extern const AppScreen screenManage;
 extern const AppScreen screenSettings;
 
 extern const AppScreen* currentScreen;
@@ -80,11 +82,12 @@ extern const AppScreen* currentScreen;
 void screenSetup(const AppScreen* screen, int input);
 void screenDraw(void);
 void screenMessage(int time, const char* format, ...);
+void screensInitAll(void);
 
 // Spreadsheet functions
 void screenFullRedraw(ScreenData* screen);
 void screenDrawOverlays(ScreenData* screen);
-int screenInput(ScreenData* screen, int keys, int isDoubleTap);
+int screenInput(ScreenData* screen, int isKeyDown, int keys, int isDoubleTap);
 
 // Utility functions
 void setCellColor(int state, int isEmpty, int hasContent);
@@ -116,5 +119,12 @@ int editFX(enum CellEditAction action, uint8_t* fx, uint8_t* lastFX, int isTable
 int editFXValue(enum CellEditAction action, uint8_t* fx, uint8_t* lastFX, int isTable);
 int fxEditInput(int keys, int isDoubleTap, uint8_t* fx, uint8_t* lastFX);
 void fxEditFullDraw(uint8_t currentFX);
+
+// Manage screen functions
+int manageColumnCount(int row);
+void manageDrawStatic(void);
+void manageDrawCursor(int col, int row);
+void manageDrawField(int col, int row, int state);
+int manageOnEdit(int col, int row, enum CellEditAction action);
 
 #endif

@@ -46,6 +46,21 @@ macOS macOS-deploy:
 windows-deploy:
 	$(MAKE) -f Makefile.windows windows-deploy
 
+.PHONY: linux-package linux-package-deploy
+linux-package:
+	./build-linux-docker.sh
+
+linux-package-deploy: linux-package
+	mkdir -p ../../releases
+	$(eval VERSION := $(shell grep 'appVersion.*=' src/version.c | cut -d'"' -f2))
+	@if [ -f build/linux/ChipNomad-$(VERSION)-Linux-$(shell uname -m).tar.gz ]; then \
+		mv build/linux/ChipNomad-$(VERSION)-Linux-$(shell uname -m).tar.gz ../../releases/ChipNomad-$$(date +%Y-%m-%d)-$(VERSION)-Linux-$(shell uname -m).tar.gz; \
+		echo "Linux package created: ../../releases/ChipNomad-$$(date +%Y-%m-%d)-$(VERSION)-Linux-$(shell uname -m).tar.gz"; \
+	else \
+		echo "Error: Package not found at build/linux/ChipNomad-$(VERSION)-Linux-$(shell uname -m).tar.gz"; \
+		exit 1; \
+	fi
+
 .PHONY: deploy-all
 deploy-all:
 	./deploy-all.sh
@@ -69,3 +84,6 @@ clean-portmaster:
 
 clean-macOS:
 	rm -rf build/macos
+
+clean-linux:
+	rm -rf build/linux

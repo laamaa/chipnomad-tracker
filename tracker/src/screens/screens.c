@@ -5,6 +5,7 @@
 #include "chipnomad_lib.h"
 #include "corelib_gfx.h"
 #include "utils.h"
+#include "copy_paste.h"
 
 const AppScreen* currentScreen = NULL;
 
@@ -108,6 +109,16 @@ void screenMessage(int time, const char* format, ...) {
   if (strlen(messageBuffer) == 0) {
     gfxClearRect(0, 19, 40, 1);
   }
+}
+
+void screensInitAll(void) {
+  screenSong.init();
+  screenChain.init();
+  screenPhrase.init();
+  screenTable.init();
+  screenInstrument.init();
+  screenGroove.init();
+  resetCopyBuffers();
 }
 
 
@@ -465,7 +476,10 @@ static int inputSelectMode(ScreenData* screen, int keys, int isDoubleTap) {
   return handled;
 }
 
-int screenInput(ScreenData* screen, int keys, int isDoubleTap) {
+int screenInput(ScreenData* screen, int isKeyDown, int keys, int isDoubleTap) {
+  // Discard key up events unless no buttons are pressed (for existing logic that expects keys == 0)
+  if (!isKeyDown && keys != 0) return 0;
+  
   return (screen->selectMode == 1) ? inputSelectMode(screen, keys, isDoubleTap) : inputNormalMode(screen, keys, isDoubleTap);
 }
 

@@ -2,9 +2,18 @@
 
 ## Not yet released
 
+- *PLATFORM*: Linux x86_64 package for Linux desktops and Steam Deck
+- Support for 2x and 3x AY/YM chips
+- Linear pitch option (pitch tables are defined in cents)
+- Mute/solo tracks
+- Clean up of unused instruments, unused/duplicate phrases and chains
 - B+A on an empty cell at the Song screen now moves the whole column up (same as in LSDJ and M8)
 - Project and Instrument save functions now check for empty filename before saving
+- AY/YM emulator filter quality setting (lower quality - lower CPU load)
+- Looping cursor in the file browser
 - *FIX*: Chip settings were not initialized when loading a project
+- *FIX*: UI was monochrome in RG35xx build
+- *FIX*: All saved values are correctly reset on loading or creating a new project
 
 ## v0.0.3a (November 22, 2025)
 

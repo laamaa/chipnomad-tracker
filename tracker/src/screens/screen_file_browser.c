@@ -9,12 +9,16 @@ static void fullRedraw(void) {
 }
 
 static void draw(void) {
+  fileBrowserUpdate();
+  fileBrowserDraw();
 }
 
-static void onInput(int keys, int isDoubleTap) {
+static int onInput(int isKeyDown, int keys, int isDoubleTap) {
   if (fileBrowserInput(keys, isDoubleTap)) {
     fileBrowserDraw();
+    return 1;
   }
+  return 0;
 }
 
 const AppScreen screenFileBrowser = {
