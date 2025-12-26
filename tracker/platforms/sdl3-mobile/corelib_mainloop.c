@@ -84,6 +84,16 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
     start = SDL_GetTicks();
 
     while (SDL_PollEvent(&event)) {
+      // Handle iOS/mobile lifecycle events
+      if (event.type == SDL_EVENT_DID_ENTER_BACKGROUND || event.type == SDL_EVENT_TERMINATING) {
+        // Save state (app may be terminated soon)
+        onEvent(eventExit, 0, NULL);
+        if (event.type == SDL_EVENT_TERMINATING) {
+          return;
+        }
+        continue;
+      }
+
       if (event.type == SDL_EVENT_QUIT || (event.type == SDL_EVENT_KEY_DOWN && (
         (event.key.key == BTN_POWER) ||
         (event.key.key == BTN_EXIT) ||
