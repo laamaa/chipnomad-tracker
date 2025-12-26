@@ -1,12 +1,12 @@
-# Desktop makefile (Linux/macOS)
+# SDL3 mobile makefile
 
-# Desktop platform identifier
+# Platform identifier
 PLATFORM = sdl3
 
 include Makefile.common
 
-# Desktop-specific settings
-LIBS = $(COMMON_LIBS) platforms/sdl3-mobile
+# Override to use SDL3-specific file implementation instead of stdio
+LIBS = $(subst corelib_file_stdio,corelib_file_sdl3,$(COMMON_LIBS)) platforms/sdl3-mobile
 OUTPUT_EXT =
 
 # Platform-specific flags
