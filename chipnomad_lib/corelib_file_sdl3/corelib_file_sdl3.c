@@ -9,16 +9,12 @@ static int currentFileId = 0;
 static char stringBuffer[1024];
 static const char* documentsPath = NULL;
 
-// Initialize documents path on first use
+// Initialize documents path
+// Called automatically on first file operation
 static const char* getDocumentsPath(void) {
   if (!documentsPath) {
     // For mobile builds, use Documents folder (visible in Files app)
-    // For desktop builds during development, use preferences
-#ifdef MOBILE_BUILD
     documentsPath = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
-#else
-    documentsPath = SDL_GetPrefPath("ChipNomad", "tracker");
-#endif
     if (!documentsPath) {
       SDL_Log("Failed to get documents path: %s", SDL_GetError());
       return "";

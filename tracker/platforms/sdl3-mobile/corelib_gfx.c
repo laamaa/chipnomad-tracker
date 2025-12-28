@@ -6,8 +6,8 @@
 #include <string.h>
 #include <math.h>
 
-#include "pitch_table_utils.h"
 #include "virtual_buttons.h"
+#include "haptic_feedback.h"
 
 #define PRINT_BUFFER_SIZE (256)
 #define TEXT_COLS (40)
@@ -24,7 +24,6 @@ extern uint8_t font48x54[];
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
-SDL_Haptic *hapticDevice = NULL;
 
 static uint32_t fgColor = 0;
 static uint32_t bgColor = 0;
@@ -224,24 +223,8 @@ int gfxSetup(int *screenWidth, int *screenHeight) {
         return 1;
     }
 
-    // Initialize haptic feedback for mobile devices
-    int numHaptics = 0;
-    SDL_HapticID *haptics = SDL_GetHaptics(&numHaptics);
-    if (haptics && numHaptics > 0) {
-        hapticDevice = SDL_OpenHaptic(haptics[0]);
-        if (hapticDevice) {
-            if (SDL_InitHapticRumble(hapticDevice)) {
-                SDL_Log("Haptic feedback initialized successfully");
-            } else {
-                SDL_Log("Failed to initialize haptic rumble: %s", SDL_GetError());
-                SDL_CloseHaptic(hapticDevice);
-                hapticDevice = NULL;
-            }
-        }
-        SDL_free(haptics);
-    } else {
-        SDL_Log("No haptic devices found - vibration feedback disabled");
-    }
+    // Initialize haptic feedback (platform-specific)
+    hapticInit();
 
     sprintf(charBuffer, "%s v%s (%s)", appTitle, appVersion, appBuild);
 
@@ -350,10 +333,7 @@ void gfxCleanup(void) {
     if (buttonOverlay) SDL_DestroyTexture(buttonOverlay);
     if (fontTexture) SDL_DestroyTexture(fontTexture);
     virtualButtonsCleanup();
-    if (hapticDevice) {
-        SDL_CloseHaptic(hapticDevice);
-        hapticDevice = NULL;
-    }
+    hapticCleanup();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 }
