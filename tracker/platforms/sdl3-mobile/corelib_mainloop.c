@@ -5,6 +5,7 @@
 #include "corelib_gfx.h"
 #include "virtual_buttons.h"
 #include "haptic_feedback.h"
+#include "resource_init.h"
 
 #define FPS 60
 
@@ -80,6 +81,11 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
   SDL_FingerID activeTouches[10]; // Support up to 10 simultaneous touches
   enum Key touchKeys[10]; // Map touch IDs to keys
   int numActiveTouches = 0;
+
+  if (resourcesInitFirstRun() != 0) {
+    SDL_Log("Warning: Failed to initialize bundled resources");
+    // Continue anyway - not fatal
+  }
 
   while (1) {
     start = SDL_GetTicks();
