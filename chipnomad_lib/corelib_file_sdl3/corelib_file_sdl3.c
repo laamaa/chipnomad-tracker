@@ -186,8 +186,12 @@ static SDL_EnumerationResult enumerateCallback(void* userdata, const char* dirna
 
   // Skip hidden files
   if (fname[0] == '.') {
-    // Allow ".." for parent directory
-    if (SDL_strcmp(fname, "..") != 0) {
+    // Allow ".." for parent directory, but skip if we already added it manually
+    if (SDL_strcmp(fname, "..") == 0) {
+      if (ctx->count > 0 && SDL_strcmp(ctx->entries[0].name, "..") == 0) {
+        return SDL_ENUM_CONTINUE;
+      }
+    } else {
       return SDL_ENUM_CONTINUE;
     }
   }
@@ -261,6 +265,18 @@ FileEntry* fileListDirectory(const char* path, const char* extension, int* entry
   if (!ctx.entries) {
     *entryCount = 0;
     return NULL;
+  }
+
+  // Add ".." entry at the start if we're in a subdirectory within Documents
+  // This is needed for iOS navigation since SDL3 enumeration doesn't include it
+  const char* docsPath = getDocumentsPath();
+  size_t docsPathLen = SDL_strlen(docsPath);
+
+  // Check if fullPath is deeper than docsPath (we're in a subdirectory)
+  if (SDL_strlen(fullPath) > docsPathLen && SDL_strncmp(fullPath, docsPath, docsPathLen) == 0) {
+    SDL_strlcpy(ctx.entries[0].name, "..", sizeof(ctx.entries[0].name));
+    ctx.entries[0].isDirectory = 1;
+    ctx.count = 1;
   }
 
   bool result = SDL_EnumerateDirectory(fullPath, enumerateCallback, &ctx);
