@@ -8,10 +8,10 @@ FXName fxNames[256];
 
 // FX Names (in the order as they appear in FX select screen)
 FXName fxNamesCommon[] = {
-  {fxARP, "ARP"}, {fxARC, "ARC"}, {fxPVB, "PVB"}, {fxPBN, "PBN"}, {fxPSL, "PSL"}, {fxPIT, "PIT"}, {fxPRD, "PRD"},
+  {fxARP, "ARP"}, {fxARC, "ARC"}, {fxPVB, "PVB"}, {fxPBN, "PBN"}, {fxPSL, "PSL"}, {fxPIT, "PIT"}, {fxFIN, "FIN"}, {fxPRD, "PRD"},
   {fxVOL, "VOL"}, {fxRET, "RET"}, {fxDEL, "DEL"}, {fxOFF, "OFF"}, {fxKIL, "KIL"},
   {fxTIC, "TIC"}, {fxTBL, "TBL"}, {fxTBX, "TBX"}, {fxTHO, "THO"}, {fxTXH, "TXH"},
-  {fxGRV, "GRV"}, {fxGGR, "GGR"}, {fxHOP, "HOP"},
+  {fxGRV, "GRV"}, {fxGGR, "GGR"}, {fxHOP, "HOP"}, {fxSNG, "SNG"}
 };
 int fxCommonCount = sizeof(fxNamesCommon) / sizeof(FXName);
 

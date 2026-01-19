@@ -30,7 +30,8 @@ enum FX {
   fxPVB, // Pitch vibrato
   fxPBN, // Pitch bend
   fxPSL, // Pitch slide (portamento)
-  fxPIT, // Pitch offset
+  fxPIT, // Pitch offset (semitones)
+  fxFIN, // Fine pitch offset
   fxPRD, // Period offset
   fxVOL, // Volume (relative)
   fxRET, // Retrigger
@@ -45,6 +46,7 @@ enum FX {
   fxGRV, // Track groove
   fxGGR, // Global groove
   fxHOP, // Hop
+  fxSNG, // Song hop
   // AY-specific FX
   fxAYM, // AY Mixer settting
   fxERT, // Envelope retrigger

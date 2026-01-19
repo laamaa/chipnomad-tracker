@@ -19,7 +19,7 @@ int vibratoCommonLogic(PlaybackFXState *fx, int scale) {
   return value;
 }
 
-static uint8_t calculateArpUpDownOffset(const uint8_t *arp, const uint8_t period, const int cycleCounter, const int stepsTotal) {
+static uint8_t calculateArpUpDownOffset(const uint8_t *arp, const uint8_t period, const int cycleCounter, const int stepsTotal, const uint8_t octaveSize) {
   const int currentStep = (period + cycleCounter * 3) % stepsTotal;
   int octave, idx;
 
@@ -30,72 +30,72 @@ static uint8_t calculateArpUpDownOffset(const uint8_t *arp, const uint8_t period
     if (currentStep < 3) return arp[currentStep];
     if (currentStep < 8) {
       idx = (currentStep <= 5) ? (currentStep - 3) : (7 - currentStep);
-      return arp[idx] + 0x0C;
+      return arp[idx] + octaveSize;
     }
     return arp[10 - currentStep];
   default:
     if (currentStep < stepsTotal / 2) {
       idx = currentStep % 3;
       octave = currentStep / 3;
-      return arp[idx] + (octave * 0x0C);
+      return arp[idx] + (octave * octaveSize);
     }
     int s = currentStep - stepsTotal / 2;
     idx = 2 - (s % 3);
     octave = 2 - (s / 3);
-    return arp[idx] + (octave * 0x0C);
+    return arp[idx] + (octave * octaveSize);
   }
 }
 
-static int8_t calculateArpModeOffset(uint8_t arp[3], const uint8_t period, const int cycleCounter, const enum PlaybackArpType arpType) {
+static int8_t calculateArpModeOffset(uint8_t arp[3], const uint8_t period, const int cycleCounter, const enum PlaybackArpType arpType, const uint8_t octaveSize) {
   uint8_t noteOffset = 0;
 
   switch (arpType) {
   case arpTypeUpDown4Oct:
-    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 28);
+    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 28, octaveSize);
     break;
   case arpTypeUpDown3Oct:
-    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 22);
+    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 22, octaveSize);
     break;
   case arpTypeUpDown2Oct:
-    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 16);
+    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 16, octaveSize);
     break;
   case arpTypeUpDown1Oct:
-    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 10);
+    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 10, octaveSize);
     break;
   case arpTypeUpDown:
-    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 4);
+    noteOffset = calculateArpUpDownOffset(arp, period, cycleCounter, 4, octaveSize);
     break;
   case arpTypeDown4Oct:
-    noteOffset = (cycleCounter % 5) * -0x0c + arp[2-period];
+    noteOffset = (cycleCounter % 5) * -octaveSize + arp[2-period];
     break;
   case arpTypeDown3Oct:
-    noteOffset = (cycleCounter % 4) * -0x0c + arp[2-period];
+    noteOffset = (cycleCounter % 4) * -octaveSize + arp[2-period];
     break;
   case arpTypeDown2Oct:
-    noteOffset = (cycleCounter % 3) * -0x0c + arp[2-period];
+    noteOffset = (cycleCounter % 3) * -octaveSize + arp[2-period];
     break;
   case arpTypeDown1Oct:
     if (cycleCounter % 2 == 1) {
-      noteOffset = -0x0c;
+      noteOffset = -octaveSize;
     }
   case arpTypeDown:
     noteOffset += arp[2-period];
     break;
   case arpTypeUp5Oct:
-    noteOffset = (cycleCounter % 6) * 0x0c + arp[period];
+    noteOffset = (cycleCounter % 6) * octaveSize + arp[period];
     break;
   case arpTypeUp4Oct:
-    noteOffset = (cycleCounter % 5) * 0x0c + arp[period];
+    noteOffset = (cycleCounter % 5) * octaveSize + arp[period];
     break;
   case arpTypeUp3Oct:
-    noteOffset = (cycleCounter % 4) * 0x0c + arp[period];
+    noteOffset = (cycleCounter % 4) * octaveSize + arp[period];
     break;
   case arpTypeUp2Oct:
-    noteOffset = (cycleCounter % 3) * 0x0c + arp[period];
+    noteOffset = (cycleCounter % 3) * octaveSize + arp[period];
     break;
   case arpTypeUp1Oct:
     if (cycleCounter % 2 == 1) {
-      noteOffset = 0x0c;
+      noteOffset = octaveSize;
     }
   case arpTypeUp:
     default:
@@ -140,18 +140,25 @@ static void handleFX_ARP(struct PlaybackState *state, PlaybackTrackState *track,
   uint8_t arp[3] = {0, (fx->value & 0xF0) >> 4, fx->value & 0x0F};
   const uint8_t period = fx->data.count_fx.counter / track->arpSpeed % 3;
   const uint8_t cycles = fx->data.count_fx.counter / track->arpSpeed / 3;
-  track->note.noteOffset += calculateArpModeOffset(arp, period, cycles, track->arpType);
+  track->note.noteOffset += calculateArpModeOffset(arp, period, cycles, track->arpType, state->p->pitchTable.octaveSize);
   fx->data.count_fx.counter++;
 }
 
 // ARC - Arp settings
 static void handleFX_ARC(struct PlaybackState *state, PlaybackTrackState *track, int trackIdx, int chipIdx, PlaybackFXState *fx, PlaybackTableState *tableState) {
   track->arpSpeed = fx->value & 0x0F;
+  if (track->arpSpeed == 0) track->arpSpeed = 1;
   track->arpType = (fx->value & 0xF0) >> 4;
 }
 
-// PIT - Pitch offset
+// PIT - Pitch offset (semitones)
 static void handleFX_PIT(PlaybackState* state, PlaybackTrackState* track, int trackIdx, int chipIdx, struct PlaybackFXState* fx, PlaybackTableState *tableState) {
+  track->note.noteOffsetAcc += (int8_t)fx->value;
+  fx->fx = EMPTY_VALUE_8;
+}
+
+// FIN - Fine pitch offset
+static void handleFX_FIN(PlaybackState* state, PlaybackTrackState* track, int trackIdx, int chipIdx, struct PlaybackFXState* fx, PlaybackTableState *tableState) {
   track->note.pitchOffsetAcc += (int8_t)fx->value;
   fx->fx = EMPTY_VALUE_8;
 }
@@ -180,11 +187,7 @@ static void handleFX_THO(PlaybackState* state, PlaybackTrackState* track, int tr
   if (tableState == NULL) {
     // FX is in Phrase - hop only in instrument table
     if (track->note.instrumentTable.tableIdx != EMPTY_VALUE_8) {
-      for (int i = 0; i < 4; i++) {
-        track->note.instrumentTable.counters[i] = 0;
-        track->note.instrumentTable.rows[i] = fx->value & 0xf;
-        tableReadFX(state, trackIdx, &track->note.instrumentTable, i, 0);
-      }
+      hopToTableRow(state, trackIdx, &track->note.instrumentTable, fx->value & 0xf);
     }
     handleAllTableFX(state, trackIdx, chipIdx);
   }
@@ -196,11 +199,7 @@ static void handleFX_TXH(PlaybackState* state, PlaybackTrackState* track, int tr
   if (tableState == NULL) {
     // FX is in Phrase - hop only in aux table
     if (track->note.auxTable.tableIdx != EMPTY_VALUE_8) {
-      for (int i = 0; i < 4; i++) {
-        track->note.auxTable.counters[i] = 0;
-        track->note.auxTable.rows[i] = fx->value & 0xf;
-        tableReadFX(state, trackIdx, &track->note.auxTable, i, 0);
-      }
+      hopToTableRow(state, trackIdx, &track->note.auxTable, fx->value & 0xf);
     }
     handleAllTableFX(state, trackIdx, chipIdx);
   }
@@ -342,7 +341,7 @@ static void handleFX_PVB(PlaybackState* state, PlaybackTrackState* track, int tr
   track->note.pitchOffset += vibratoCommonLogic(fx, scale);
 }
 
-// PSL - Pitch slide (portamento
+// PSL - Pitch slide (portamento)
 static void handleFX_PSL(PlaybackState* state, PlaybackTrackState* track, int trackIdx, int chipIdx, struct PlaybackFXState* fx, PlaybackTableState *tableState) {
   if (fx->data.psl.startPeriod == 0 || (fx->data.psl.counter == 0 && (track->note.noteBase == EMPTY_VALUE_8 || track->note.noteBase == NOTE_OFF)) || fx->data.psl.counter >= fx->value) {
     fx->fx = EMPTY_VALUE_8;
@@ -405,6 +404,7 @@ static int handleFXInternal(PlaybackState* state, int trackIdx, int chipIdx, str
   else if (fx->fx == fxARC) handleFX_ARC(state, track, trackIdx, chipIdx, fx, tableState);
   else if (fx->fx == fxPBN) handleFX_PBN(state, track, trackIdx, chipIdx, fx, tableState);
   else if (fx->fx == fxPIT) handleFX_PIT(state, track, trackIdx, chipIdx, fx, tableState);
+  else if (fx->fx == fxFIN) handleFX_FIN(state, track, trackIdx, chipIdx, fx, tableState);
   else if (fx->fx == fxPRD) handleFX_PRD(state, track, trackIdx, chipIdx, fx, tableState);
   else if (fx->fx == fxTIC) handleFX_TIC(state, track, trackIdx, chipIdx, fx, tableState);
   else if (fx->fx == fxVOL) handleFX_VOL(state, track, trackIdx, chipIdx, fx, tableState);

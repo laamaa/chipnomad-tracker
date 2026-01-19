@@ -43,8 +43,11 @@ char* helpFXHint(uint8_t* fx, int isTable) {
     case fxPSL: // Pitch slide (portamento)
       sprintf(buffer, "Pitch slide for %hhd tics", fx[1]);
       break;
-    case fxPIT: // Pitch offset
-      sprintf(buffer, "Pitch offset by %hhd", fx[1]);
+    case fxPIT: // Pitch offset (semitones)
+      sprintf(buffer, "Pitch offset by %hhd semitones", (int8_t)fx[1]);
+      break;
+    case fxFIN: // Fine pitch offset
+      sprintf(buffer, "Fine pitch offset by %hhd", (int8_t)fx[1]);
       break;
     case fxPRD: // Period offset
       sprintf(buffer, "Period offset by %hhd", fx[1]);
@@ -74,26 +77,33 @@ char* helpFXHint(uint8_t* fx, int isTable) {
       sprintf(buffer, "Aux table %s", byteToHex(fx[1]));
       break;
     case fxTHO: // Table hop
-      sprintf(buffer, "Jump to instrument table row %hhX", fx[1] & 0xf);
+      sprintf(buffer, "Hop to instrument table row %hhX", fx[1] & 0xf);
       break;
     case fxTXH: // Aux table hop
-      sprintf(buffer, "Jump to aux table row %hhX", fx[1] & 0xf);
+      sprintf(buffer, "Hop to aux table row %hhX", fx[1] & 0xf);
       break;
     case fxGRV: // Track groove
-      sprintf(buffer, "Track groove %hhu", fx[1]);
+      sprintf(buffer, "Track groove %s", byteToHex(fx[1]));
       break;
     case fxGGR: // Global groove
-      sprintf(buffer, "Global groove %hhu", fx[1]);
+      sprintf(buffer, "Global groove %s", byteToHex(fx[1]));
       break;
     case fxHOP: // Hop
-      if (isTable) {
-        sprintf(buffer, "Jump to row %hhX in this column", fx[1] & 0xf);
+      if (!isTable && fx[1] == 0xff) {
+        sprintf(buffer, "Stop playback");
       } else {
-        if (fx[1] == 0xff) {
-          sprintf(buffer, "Stop playback");
+        if ((fx[1] & 0xf0) == 0) {
+          sprintf(buffer, "Hop to row %hhX ", fx[1] & 0xf);
         } else {
-          sprintf(buffer, "Jump to song row %s", byteToHex(fx[1]));
+          sprintf(buffer, "Hop to row %hhX (%hhu times)", fx[1] & 0xf, fx[1] >> 4);
         }
+      }
+      break;
+    case fxSNG: // Song hop
+      if (isTable) {
+        sprintf(buffer, "No effect");
+      } else {
+        sprintf(buffer, "Song hop by %hhd", fx[1]);
       }
       break;
     // AY-specific FX
@@ -165,7 +175,8 @@ static const char* fxHelpText[] = {
   [fxPVB] = "Pitch Vibrato\nOscillates pitch up/down\nwith speed and depth",
   [fxPBN] = "Pitch Bend\nSlides pitch by amount\nper step continuously",
   [fxPSL] = "Pitch Slide\nSlides to target pitch\nover specified tics",
-  [fxPIT] = "Pitch Offset\nAdds fixed offset\nto note pitch",
+  [fxPIT] = "Pitch Offset\nAdds semitone offset\nto note pitch",
+  [fxFIN] = "Fine Pitch Offset\nAdds fine offset\nto note pitch",
   [fxPRD] = "Period Offset\nAdds fixed offset\nto chip period",
   [fxVOL] = "Volume Offset\nAdds/subtracts from\ncurrent volume",
   [fxRET] = "Retrigger\nRetriggers note every\nN tics",
@@ -179,7 +190,8 @@ static const char* fxHelpText[] = {
   [fxTXH] = "Aux Table Hop\nJumps to specific\naux table row",
   [fxGRV] = "Track Groove\nSets groove for\nthis track only",
   [fxGGR] = "Global Groove\nSets groove for\nall tracks",
-  [fxHOP] = "Hop\nJumps to song row\nor stops playback",
+  [fxHOP] = "Hop\nHops to phrase/table row X times",
+  [fxSNG] = "Song Hop\nHops in song by\namount specified",
   [fxAYM] = "AY Mixer\nControls tone/noise mix\nand envelope mode",
   [fxERT] = "Envelope Retrigger\nRestarts AY envelope\nfrom beginning",
   [fxNOI] = "Noise Offset\nAdds offset to\nnoise period",
