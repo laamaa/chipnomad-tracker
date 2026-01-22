@@ -3,8 +3,10 @@
 #include "resource_init.h"
 #include "corelib/corelib_file.h"
 #include "common.h"
+#include "../../src/common.h"
 
 #define MARKER_FILENAME ".chipnomad_initialized"
+#define CURRENT_INIT_VERSION "1.1.0"
 
 // Hardcoded file lists for copying from bundle
 static const char* demoFiles[] = {
@@ -22,14 +24,64 @@ static const char* pitchTableFiles[] = {
   NULL
 };
 
-// Check if this is the first run by looking for marker file
-static int isFirstRun(void) {
+static const char* themeFiles[] = {
+  "Default.cth",
+  "nIkO.cth",
+  NULL
+};
+
+// Compare version strings (simple strcmp-based comparison)
+// Returns: <0 if v1 < v2, 0 if equal, >0 if v1 > v2
+static int compareVersions(const char* v1, const char* v2) {
+  int major1, minor1, patch1;
+  int major2, minor2, patch2;
+
+  // Parse first version
+  if (sscanf(v1, "%d.%d.%d", &major1, &minor1, &patch1) != 3) {
+    return -1;  // Invalid format, treat as older
+  }
+
+  // Parse second version
+  if (sscanf(v2, "%d.%d.%d", &major2, &minor2, &patch2) != 3) {
+    return 1;  // Invalid format, treat current as newer
+  }
+
+  if (major1 != major2) return major1 - major2;
+  if (minor1 != minor2) return minor1 - minor2;
+  return patch1 - patch2;
+}
+
+// Check if initialization is needed by comparing marker file version
+static int needsInitialization(void) {
   const int fileId = fileOpen(MARKER_FILENAME, 0);  // Try to open for reading
   if (fileId < 0) {
-    return 1;  // File doesn't exist - first run
+    return 1;  // File doesn't exist - needs initialization
   }
+
+  // Read version from marker file
+  char storedVersion[32] = {0};
+  int bytesRead = fileRead(fileId, storedVersion, sizeof(storedVersion) - 1);
   fileClose(fileId);
-  return 0;  // File exists - not first run
+
+  if (bytesRead <= 0) {
+    SDL_Log("Marker file empty or unreadable - needs initialization");
+    return 1;
+  }
+
+  // Strip newline if present
+  char* newline = strchr(storedVersion, '\n');
+  if (newline) *newline = '\0';
+
+  // Compare versions
+  int cmp = compareVersions(storedVersion, CURRENT_INIT_VERSION);
+  if (cmp < 0) {
+    SDL_Log("Stored version %s is older than %s - needs initialization",
+            storedVersion, CURRENT_INIT_VERSION);
+    return 1;
+  }
+
+  SDL_Log("Stored version %s is up to date", storedVersion);
+  return 0;  // Version is current or newer
 }
 
 // Create marker file to indicate resources have been initialized
@@ -40,9 +92,9 @@ static int createMarkerFile(void) {
     return -1;
   }
 
-  // Write version info for future migration support
-  const char* version = "1.0.0\n";
-  fileWrite(fileId, (void*)version, (int)strlen(version));
+  // Write current version
+  fileWrite(fileId, (void*)CURRENT_INIT_VERSION, (int)strlen(CURRENT_INIT_VERSION));
+  fileWrite(fileId, "\n", 1);
   fileClose(fileId);
 
   return 0;
@@ -138,6 +190,12 @@ static int copyBundledResources(void) {
     totalSuccess++;
   }
 
+  // Copy themes
+  SDL_Log("Copying themes...");
+  if (copyDirectory(bundlePath, ".", "themes", themeFiles) == 0) {
+    totalSuccess++;
+  }
+
   // Create empty instruments directory for future use
   SDL_Log("Creating instruments directory...");
   if (fileCreateDirectory("instruments") == 0) {
@@ -149,17 +207,17 @@ static int copyBundledResources(void) {
   return totalSuccess > 0 ? 0 : -1;  // Success if at least one category copied
 }
 
-// Main entry point - initialize bundled resources on first run
+// Main entry point - initialize bundled resources on first run or version upgrade
 int resourcesInitFirstRun(void) {
-  SDL_Log("Checking for first run...");
+  SDL_Log("Checking if resource initialization needed...");
 
-  // Check if this is the first run
-  if (!isFirstRun()) {
-    SDL_Log("Not first run - skipping resource initialization");
-    return 0;  // Not first run - nothing to do
+  // Check if initialization is needed (first run or version upgrade)
+  if (!needsInitialization()) {
+    SDL_Log("Resources up to date - skipping initialization");
+    return 0;  // Already initialized with current version
   }
 
-  SDL_Log("First run detected - initializing bundled resources...");
+  SDL_Log("Initialization needed - copying bundled resources...");
 
   // Copy bundled resources
   if (copyBundledResources() != 0) {
@@ -178,11 +236,14 @@ int resourcesInitFirstRun(void) {
   strncpy(appSettings.projectPath, PATH_SEPARATOR_STR "Demos", PATH_LENGTH);
   strncpy(appSettings.pitchTablePath, PATH_SEPARATOR_STR "pitch-tables", PATH_LENGTH);
   strncpy(appSettings.instrumentPath, PATH_SEPARATOR_STR "instruments", PATH_LENGTH);
+  strncpy(appSettings.themePath, PATH_SEPARATOR_STR "themes", PATH_LENGTH);
+
 
   // Ensure null termination
   appSettings.projectPath[PATH_LENGTH] = '\0';
   appSettings.pitchTablePath[PATH_LENGTH] = '\0';
   appSettings.instrumentPath[PATH_LENGTH] = '\0';
+  appSettings.themePath[PATH_LENGTH] = '\0';
 
   // Save updated settings
   if (settingsSave() != 0) {
