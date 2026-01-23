@@ -126,6 +126,7 @@ typedef struct InstrumentAY {
   uint8_t veR;
   uint8_t autoEnvN; // 0 - no auto-env
   uint8_t autoEnvD;
+  uint8_t defaultMixer; // Low nibble: mixer, high nibble: envelope shape
 } InstrumentAY;
 
 typedef union InstrumentChipData {
@@ -195,6 +196,7 @@ typedef struct Project {
   PitchTable pitchTable;
 
   uint16_t song[PROJECT_MAX_LENGTH][PROJECT_MAX_TRACKS];
+  uint8_t songHighlight[PROJECT_MAX_LENGTH][PROJECT_MAX_TRACKS];
   Chain chains[PROJECT_MAX_CHAINS];
   Phrase phrases[PROJECT_MAX_PHRASES];
   Groove grooves[PROJECT_MAX_GROOVES];
