@@ -837,7 +837,8 @@ static int instrumentLoadInternal(int fileId, Project* project, int instrumentId
 
   if (loadInstrument(fileId, &project->instruments[instrumentIdx], project)) return 1;
 
-  READ_STRING; if (strncmp(lpstr, "### Table", 9)) return 1;
+  // lpstr already holds "### Table X" — loadInstrument exits its loop when it reads a '#' line
+  if (strncmp(lpstr, "### Table", 9)) return 1;
 
   if (loadTable(fileId, &project->tables[instrumentIdx], project)) return 1;
 
