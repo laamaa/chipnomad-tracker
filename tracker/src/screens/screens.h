@@ -2,6 +2,7 @@
 #define __SCREENS_H__
 
 #include "common.h"
+#include "../chipnomad_lib/playback.h"
 
 #define MESSAGE_TIME (60)
 
@@ -57,6 +58,9 @@ typedef struct ScreenData {
   void (*drawColHeader)(int col, int state);
   void (*drawField)(int col, int row, int state);
   int (*onEdit)(int col, int row, enum CellEditAction action);
+  int (*onKey)(enum Key key, int isDown);  // Optional: handle keys before standard processing
+  int (*onRawInput)(int keyCode, int isKeyboard, int isDown);  // Optional: capture raw SDL input
+  LoopRange (*getLoopRange)(void);  // Optional: return loop range for ranged playback
 } ScreenData;
 
 extern const AppScreen screenProject;
@@ -77,6 +81,7 @@ extern const AppScreen screenExport;
 extern const AppScreen screenManage;
 extern const AppScreen screenSettings;
 extern const AppScreen screenColorTheme;
+extern const AppScreen screenKeyMapping;
 
 extern const AppScreen* currentScreen;
 
@@ -94,6 +99,7 @@ int screenInput(ScreenData* screen, int isKeyDown, int keys, int tapCount);
 void setCellColor(int state, int isEmpty, int hasContent);
 void getSelectionBounds(ScreenData* screen, int* startCol, int* startRow, int* endCol, int* endRow);
 int isSingleColumnSelection(ScreenData* screen);
+LoopRange screenGetLoopRange(const AppScreen* screen);
 
 // Confirmation dialog
 void confirmSetup(const char* message, void (*confirmCallback)(void), void (*cancelCallback)(void));

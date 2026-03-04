@@ -1,18 +1,11 @@
 #include "common.h"
 #include "corelib/corelib_file.h"
 #include "corelib/corelib_gfx.h"
-#include "keyboard_layout.h"
 #include <string.h>
 
 #ifdef MACOS_BUILD
 #include <sys/stat.h>
 #include <unistd.h>
-#endif
-
-#if defined(DESKTOP_BUILD) || defined(PORTMASTER_BUILD)
-#define DEFAULT_VOLUME (1.0)
-#else
-#define DEFAULT_VOLUME (0.5)
 #endif
 
 #define SETTINGS_FILENAME "settings.txt"
@@ -25,12 +18,10 @@ AppSettings appSettings = {
   .doubleTapFrames = 20,
   .keyRepeatDelay = 16,
   .keyRepeatSpeed = 2,
-  .volume = DEFAULT_VOLUME,
   .mixVolume = 20000.0f / 32767.0f,
   .quality = CHIPNOMAD_QUALITY_MEDIUM,
   .pitchConflictWarning = 0,
   .gamepadSwapAB = 0,
-  .keyboardLayout = KEYBOARD_LAYOUT_AUTO,
   .colorScheme = {
     .background = 0x000f1a,
     .textEmpty = 0x002638,
@@ -94,12 +85,21 @@ int settingsSave(void) {
   filePrintf(fileId, "doubleTapFrames: %d\n", appSettings.doubleTapFrames);
   filePrintf(fileId, "keyRepeatDelay: %d\n", appSettings.keyRepeatDelay);
   filePrintf(fileId, "keyRepeatSpeed: %d\n", appSettings.keyRepeatSpeed);
-  filePrintf(fileId, "volume: %f\n", appSettings.volume);
   filePrintf(fileId, "mixVolume: %f\n", appSettings.mixVolume);
   filePrintf(fileId, "quality: %d\n", appSettings.quality);
   filePrintf(fileId, "pitchConflictWarning: %d\n", appSettings.pitchConflictWarning);
   filePrintf(fileId, "gamepadSwapAB: %d\n", appSettings.gamepadSwapAB);
-  filePrintf(fileId, "keyboardLayout: %d\n", (int)appSettings.keyboardLayout);
+
+  // Save key mappings
+  filePrintf(fileId, "keyUp: %d,%d,%d\n", appSettings.keyMapping.keyUp[0], appSettings.keyMapping.keyUp[1], appSettings.keyMapping.keyUp[2]);
+  filePrintf(fileId, "keyDown: %d,%d,%d\n", appSettings.keyMapping.keyDown[0], appSettings.keyMapping.keyDown[1], appSettings.keyMapping.keyDown[2]);
+  filePrintf(fileId, "keyLeft: %d,%d,%d\n", appSettings.keyMapping.keyLeft[0], appSettings.keyMapping.keyLeft[1], appSettings.keyMapping.keyLeft[2]);
+  filePrintf(fileId, "keyRight: %d,%d,%d\n", appSettings.keyMapping.keyRight[0], appSettings.keyMapping.keyRight[1], appSettings.keyMapping.keyRight[2]);
+  filePrintf(fileId, "keyEdit: %d,%d,%d\n", appSettings.keyMapping.keyEdit[0], appSettings.keyMapping.keyEdit[1], appSettings.keyMapping.keyEdit[2]);
+  filePrintf(fileId, "keyOpt: %d,%d,%d\n", appSettings.keyMapping.keyOpt[0], appSettings.keyMapping.keyOpt[1], appSettings.keyMapping.keyOpt[2]);
+  filePrintf(fileId, "keyPlay: %d,%d,%d\n", appSettings.keyMapping.keyPlay[0], appSettings.keyMapping.keyPlay[1], appSettings.keyMapping.keyPlay[2]);
+  filePrintf(fileId, "keyShift: %d,%d,%d\n", appSettings.keyMapping.keyShift[0], appSettings.keyMapping.keyShift[1], appSettings.keyMapping.keyShift[2]);
+
   filePrintf(fileId, "colorBackground: 0x%06x\n", appSettings.colorScheme.background);
   filePrintf(fileId, "colorTextEmpty: 0x%06x\n", appSettings.colorScheme.textEmpty);
   filePrintf(fileId, "colorTextInfo: 0x%06x\n", appSettings.colorScheme.textInfo);
@@ -116,6 +116,8 @@ int settingsSave(void) {
   filePrintf(fileId, "pitchTablePath: %s\n", appSettings.pitchTablePath);
   filePrintf(fileId, "instrumentPath: %s\n", appSettings.instrumentPath);
   filePrintf(fileId, "themePath: %s\n", appSettings.themePath);
+  filePrintf(fileId, "fontPath: %s\n", appSettings.fontPath);
+  filePrintf(fileId, "fontFolderPath: %s\n", appSettings.fontFolderPath);
 
   fileClose(fileId);
   return 0;
@@ -147,8 +149,6 @@ int settingsLoad(void) {
       sscanf(line + 16, "%d", &appSettings.keyRepeatDelay);
     } else if (strncmp(line, "keyRepeatSpeed: ", 16) == 0) {
       sscanf(line + 16, "%d", &appSettings.keyRepeatSpeed);
-    } else if (strncmp(line, "volume: ", 8) == 0) {
-      sscanf(line + 8, "%f", &appSettings.volume);
     } else if (strncmp(line, "mixVolume: ", 11) == 0) {
       sscanf(line + 11, "%f", &appSettings.mixVolume);
     } else if (strncmp(line, "quality: ", 9) == 0) {
@@ -157,10 +157,22 @@ int settingsLoad(void) {
       sscanf(line + 22, "%d", &appSettings.pitchConflictWarning);
     } else if (strncmp(line, "gamepadSwapAB: ", 15) == 0) {
       sscanf(line + 15, "%d", &appSettings.gamepadSwapAB);
-    } else if (strncmp(line, "keyboardLayout: ", 16) == 0) {
-      int layoutValue;
-      sscanf(line + 16, "%d", &layoutValue);
-      appSettings.keyboardLayout = (KeyboardLayout)layoutValue;
+    } else if (strncmp(line, "keyUp: ", 7) == 0) {
+      sscanf(line + 7, "%d,%d,%d", &appSettings.keyMapping.keyUp[0], &appSettings.keyMapping.keyUp[1], &appSettings.keyMapping.keyUp[2]);
+    } else if (strncmp(line, "keyDown: ", 9) == 0) {
+      sscanf(line + 9, "%d,%d,%d", &appSettings.keyMapping.keyDown[0], &appSettings.keyMapping.keyDown[1], &appSettings.keyMapping.keyDown[2]);
+    } else if (strncmp(line, "keyLeft: ", 9) == 0) {
+      sscanf(line + 9, "%d,%d,%d", &appSettings.keyMapping.keyLeft[0], &appSettings.keyMapping.keyLeft[1], &appSettings.keyMapping.keyLeft[2]);
+    } else if (strncmp(line, "keyRight: ", 10) == 0) {
+      sscanf(line + 10, "%d,%d,%d", &appSettings.keyMapping.keyRight[0], &appSettings.keyMapping.keyRight[1], &appSettings.keyMapping.keyRight[2]);
+    } else if (strncmp(line, "keyEdit: ", 9) == 0) {
+      sscanf(line + 9, "%d,%d,%d", &appSettings.keyMapping.keyEdit[0], &appSettings.keyMapping.keyEdit[1], &appSettings.keyMapping.keyEdit[2]);
+    } else if (strncmp(line, "keyOpt: ", 8) == 0) {
+      sscanf(line + 8, "%d,%d,%d", &appSettings.keyMapping.keyOpt[0], &appSettings.keyMapping.keyOpt[1], &appSettings.keyMapping.keyOpt[2]);
+    } else if (strncmp(line, "keyPlay: ", 9) == 0) {
+      sscanf(line + 9, "%d,%d,%d", &appSettings.keyMapping.keyPlay[0], &appSettings.keyMapping.keyPlay[1], &appSettings.keyMapping.keyPlay[2]);
+    } else if (strncmp(line, "keyShift: ", 10) == 0) {
+      sscanf(line + 10, "%d,%d,%d", &appSettings.keyMapping.keyShift[0], &appSettings.keyMapping.keyShift[1], &appSettings.keyMapping.keyShift[2]);
     } else if (strncmp(line, "colorBackground: ", 17) == 0) {
       sscanf(line + 17, "0x%x", &appSettings.colorScheme.background);
     } else if (strncmp(line, "colorTextEmpty: ", 16) == 0) {
@@ -199,6 +211,12 @@ int settingsLoad(void) {
     } else if (strncmp(line, "themePath: ", 11) == 0) {
       strncpy(appSettings.themePath, line + 11, PATH_LENGTH);
       appSettings.themePath[PATH_LENGTH] = 0;
+    } else if (strncmp(line, "fontPath: ", 10) == 0) {
+      strncpy(appSettings.fontPath, line + 10, PATH_LENGTH);
+      appSettings.fontPath[PATH_LENGTH] = 0;
+    } else if (strncmp(line, "fontFolderPath: ", 16) == 0) {
+      strncpy(appSettings.fontFolderPath, line + 16, PATH_LENGTH);
+      appSettings.fontFolderPath[PATH_LENGTH] = 0;
     }
   }
 
@@ -305,6 +323,18 @@ void extractFilenameWithoutExtension(const char* path, char* output, int maxLeng
 }
 
 void clearNotePreview(void) {
-  // Clear the note preview area for all possible tracks (right side of screen)
+  // Clear the note preview area for all tracks (right side of screen)
   gfxClearRect(35, 3, 5, PROJECT_MAX_TRACKS);
+}
+
+void initDefaultKeyMapping(void) {
+  // Platform-specific initialization is done in corelib_input
+  // This function is kept for API compatibility
+  memset(&appSettings.keyMapping, 0, sizeof(KeyMapping));
+}
+
+void resetKeyMappingToDefaults(void) {
+  // Platform-specific reset is done in corelib_input
+  // This function is kept for API compatibility
+  memset(&appSettings.keyMapping, 0, sizeof(KeyMapping));
 }

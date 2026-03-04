@@ -1,10 +1,14 @@
 #include "screen_settings.h"
 #include "screen_color_theme.h"
+#include "screen_keymapping.h"
+#include "file_browser.h"
 #include "common.h"
 #include "corelib_gfx.h"
 #include "corelib_mainloop.h"
+#include "corelib_font.h"
+#include "corelib_file.h"
 #include "screens.h"
-#include "keyboard_layout.h"
+#include <string.h>
 
 // Forward declarations
 static int settingsColumnCount(int row);
@@ -16,7 +20,7 @@ static void settingsDrawField(int col, int row, int state);
 static int settingsOnEdit(int col, int row, enum CellEditAction action);
 
 static ScreenData screenSettingsData = {
-  .rows = 7,
+  .rows = 8,
   .cursorRow = 0,
   .cursorCol = 0,
   .selectMode = -1,
@@ -30,6 +34,35 @@ static ScreenData screenSettingsData = {
 };
 
 static void setup(int input) {
+}
+
+static void fontLoadCallback(const char* path) {
+  Font* font = fontLoad(path);
+  if (font) {
+    fontSetCurrent(font);
+    gfxReloadFont();
+    strncpy(appSettings.fontPath, path, PATH_LENGTH);
+    appSettings.fontPath[PATH_LENGTH] = 0;
+    
+    // Extract folder path
+    char* lastSeparator = strrchr(path, PATH_SEPARATOR);
+    if (lastSeparator) {
+      int pathLen = lastSeparator - path;
+      if (pathLen > 0 && pathLen < PATH_LENGTH) {
+        strncpy(appSettings.fontFolderPath, path, pathLen);
+        appSettings.fontFolderPath[pathLen] = '\0';
+      }
+    }
+    
+    screenMessage(MESSAGE_TIME, "Loaded: %s", font->name);
+  } else {
+    screenMessage(MESSAGE_TIME, "Failed to load font");
+  }
+  screenSetup(&screenSettings, 0);
+}
+
+static void fontCancelCallback(void) {
+  screenSetup(&screenSettings, 0);
 }
 
 static void fullRedraw(void) {
@@ -52,19 +85,21 @@ void settingsDrawStatic(void) {
 
 void settingsDrawCursor(int col, int row) {
   if (row == 0 && col == 0) {
-    gfxCursor(23, 2, 3); // Under ON/OFF value
+    gfxCursor(23, 2, 3);
   } else if (row == 1 && col == 0) {
-    gfxCursor(23, 3, 4); // Under mix volume percentage
+    gfxCursor(23, 3, 4);
   } else if (row == 2 && col == 0) {
-    gfxCursor(23, 4, 6); // Under quality value
+    gfxCursor(23, 4, 6);
   } else if (row == 3 && col == 0) {
-    gfxCursor(23, 5, 3); // Under gamepad swap ON/OFF
+    gfxCursor(23, 5, 3);
   } else if (row == 4 && col == 0) {
-    gfxCursor(23, 6, 6); // Under keyboard layout value
+    gfxCursor(0, 6, 11);
   } else if (row == 5 && col == 0) {
-    gfxCursor(0, 7, 16); // "Edit color theme"
+    gfxCursor(0, 7, 9);
   } else if (row == 6 && col == 0) {
-    gfxCursor(0, 17, 14); // "Quit ChipNomad"
+    gfxCursor(0, 8, 16);
+  } else if (row == 7 && col == 0) {
+    gfxCursor(0, 17, 14);
   }
 }
 
@@ -98,14 +133,15 @@ void settingsDrawField(int col, int row, int state) {
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
     gfxPrint(23, 5, appSettings.gamepadSwapAB ? "ON " : "OFF");
   } else if (row == 4 && col == 0) {
-    gfxSetFgColor(appSettings.colorScheme.textDefault);
-    gfxPrint(0, 6, "Keyboard layout");
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
-    gfxPrint(23, 6, getKeyboardLayoutName(appSettings.keyboardLayout));
+    gfxPrint(0, 6, "Key mapping");
   } else if (row == 5 && col == 0) {
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
-    gfxPrint(0, 7, "Edit color theme");
+    gfxPrint(0, 7, "Load font");
   } else if (row == 6 && col == 0) {
+    gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
+    gfxPrint(0, 8, "Edit color theme");
+  } else if (row == 7 && col == 0) {
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
     gfxPrint(0, 17, "Quit ChipNomad");
   }
@@ -140,22 +176,21 @@ int settingsOnEdit(int col, int row, enum CellEditAction action) {
     // Gamepad swap A/B (0/1)
     static uint8_t lastValue = 0;
     return edit8withLimit(action, (uint8_t*)&appSettings.gamepadSwapAB, &lastValue, 1, 1);
-  } else if (row == 4 && col == 0) {
-    // Keyboard layout (0-4)
-    static uint8_t lastValue = 0;
-    int result = edit8withLimit(action, (uint8_t*)&appSettings.keyboardLayout, &lastValue, 1, 4);
-
-    // If keyboard layout was actually changed, update the active layout
-    if (result && appSettings.keyboardLayout != lastValue) {
-      updateKeyboardLayout();
-    }
-
-    return result;
+  } else if (row == 4 && col == 0 && action == editTap) {
+#if defined(DESKTOP_BUILD) || defined(PORTMASTER_BUILD)
+    screenSetup(&screenKeyMapping, 0);
+#endif
+    return 0;
   } else if (row == 5 && col == 0 && action == editTap) {
-    // Navigate to color theme screen
-    screenSetup(&screenColorTheme, 0);
+    fileBrowserSetup("LOAD FONT", ".cnfont", appSettings.fontFolderPath, 
+      (void (*)(const char*))fontLoadCallback, 
+      (void (*)(void))fontCancelCallback);
+    screenSetup(&screenFileBrowser, 0);
     return 0;
   } else if (row == 6 && col == 0 && action == editTap) {
+    screenSetup(&screenColorTheme, 0);
+    return 0;
+  } else if (row == 7 && col == 0 && action == editTap) {
     // Trigger exit event
     mainLoopTriggerQuit();
     return 1;

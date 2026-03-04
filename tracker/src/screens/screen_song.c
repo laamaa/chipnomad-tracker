@@ -18,7 +18,9 @@ typedef enum {
   MUTE_SOLO_EMPTY,
   MUTE_SOLO_OPT_PRESSED,
   MUTE_SOLO_MUTE_STATE,
-  MUTE_SOLO_SOLO_STATE
+  MUTE_SOLO_SOLO_STATE,
+  MUTE_SOLO_TEMP_LEFT,
+  MUTE_SOLO_TEMP_RIGHT
 } MuteSoloState;
 
 static MuteSoloState muteSoloState = MUTE_SOLO_EMPTY;
@@ -31,6 +33,7 @@ static void drawColHeader(int col, int state);
 static void drawCursor(int col, int row);
 static void drawSelection(int col1, int row1, int col2, int row2);
 static int onEdit(int col, int row, enum CellEditAction action);
+static LoopRange getLoopRange(void);
 
 static ScreenData screen = {
   .rows = PROJECT_MAX_LENGTH,
@@ -50,6 +53,7 @@ static ScreenData screen = {
   .drawColHeader = drawColHeader,
   .drawField = drawField,
   .onEdit = onEdit,
+  .getLoopRange = getLoopRange,
 };
 
 static void init(void) {
@@ -353,6 +357,22 @@ static int onInput(int isKeyDown, int keys, int tapCount) {
           audioManager.toggleTrackSolo(screen.cursorCol);
           muteSoloState = MUTE_SOLO_SOLO_STATE;
           handled = 1;
+        } else if (isKeyDown && keys == (keyOpt | keyLeft)) {
+          // Solo tracks to the left (including cursor)
+          for (int i = 0; i < PROJECT_MAX_TRACKS; i++) {
+            audioManager.trackStates[i] = (i <= screen.cursorCol) ? TRACK_SOLO : TRACK_NORMAL;
+          }
+          audioManager.toggleTrackSolo(-1);
+          muteSoloState = MUTE_SOLO_TEMP_LEFT;
+          handled = 1;
+        } else if (isKeyDown && keys == (keyOpt | keyRight)) {
+          // Solo tracks to the right (including cursor)
+          for (int i = 0; i < PROJECT_MAX_TRACKS; i++) {
+            audioManager.trackStates[i] = (i >= screen.cursorCol) ? TRACK_SOLO : TRACK_NORMAL;
+          }
+          audioManager.toggleTrackSolo(-1);
+          muteSoloState = MUTE_SOLO_TEMP_RIGHT;
+          handled = 1;
         } else if (isKeyDown && keys == keyOpt) {
           handled = 1; // Stay in OPT_PRESSED state
         } else if (!isKeyDown && keys == 0) {
@@ -393,6 +413,21 @@ static int onInput(int isKeyDown, int keys, int tapCount) {
           muteSoloState = MUTE_SOLO_EMPTY;
         }
         break;
+
+      case MUTE_SOLO_TEMP_LEFT:
+      case MUTE_SOLO_TEMP_RIGHT:
+        if (!isKeyDown && (keys == keyOpt || keys == 0)) {
+          // Reset all tracks to normal
+          for (int i = 0; i < PROJECT_MAX_TRACKS; i++) {
+            audioManager.trackStates[i] = TRACK_NORMAL;
+          }
+          audioManager.toggleTrackSolo(-1);
+          muteSoloState = (keys == keyOpt) ? MUTE_SOLO_OPT_PRESSED : MUTE_SOLO_EMPTY;
+          handled = 1;
+        } else if (keys == (keyOpt | keyLeft) || keys == (keyOpt | keyRight)) {
+          handled = 1;
+        }
+        break;
     }
   }
 
@@ -410,6 +445,23 @@ static int onInput(int isKeyDown, int keys, int tapCount) {
   return handled;
 }
 
+static LoopRange getLoopRange(void) {
+  LoopRange range = {0};
+  if (screen.selectMode == 1) {
+    int startCol, startRow, endCol, endRow;
+    getSelectionBounds(&screen, &startCol, &startRow, &endCol, &endRow);
+    range.enabled = 1;
+    range.level = 0;
+    range.startSongRow = startRow;
+    range.startChainRow = 0;
+    range.startPhraseRow = 0;
+    range.endSongRow = endRow;
+    range.endChainRow = 15;
+    range.endPhraseRow = 15;
+  }
+  return range;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 const AppScreen screenSong = {
@@ -419,3 +471,7 @@ const AppScreen screenSong = {
   .onInput = onInput,
   .init = init
 };
+
+LoopRange songScreenGetLoopRange(void) {
+  return getLoopRange();
+}

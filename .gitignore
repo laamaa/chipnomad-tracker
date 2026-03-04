@@ -11,3 +11,8 @@ generate
 compile_commands.json
 convert_commands.sh
 .amazonq
+/font-generator/font_preview.png
+/font-generator/generate
+/font-generator/fonts
+/website/hugo/public/
+/website/hugo/resources/_gen/

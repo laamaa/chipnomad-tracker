@@ -118,68 +118,99 @@ static void tableProgress(PlaybackState* state, int trackIdx, struct PlaybackTab
 
     if (table->counters[i] >= table->speed[i]) {
       table->counters[i] = 0;
-
-      uint8_t fxType = p->tables[table->tableIdx].rows[table->rows[i]].fx[i][0];
-      uint8_t fxValue = p->tables[table->tableIdx].rows[table->rows[i]].fx[i][1];
-
-      // Special case for THO/HOP pointing to the same row - we may not progress further
-      int shouldProgress = 1;
-
-      if (fxType == fxTHO && (fxValue & 0xf) == table->rows[i]) {
-        // THO: Stay on the same row
-        hopToTableRow(state, trackIdx, table, fxValue & 0xf);
-        break;
+      uint8_t row = table->rows[i];
+      
+      // Check if any column has THO on current row
+      int thoTarget = -1;
+      for (int col = 0; col < 4; col++) {
+        if (p->tables[table->tableIdx].rows[row].fx[col][0] == fxTHO) {
+          thoTarget = p->tables[table->tableIdx].rows[row].fx[col][1] & 0xf;
+          break;
+        }
       }
-      if (fxType == fxHOP && (fxValue & 0xf) == table->rows[i]) {
-        // HOP: Loop if needed
+      
+      if (thoTarget >= 0 && thoTarget == row) {
+        // THO pointing to same row - stay here
+        tableReadFX(state, trackIdx, table, i, 0);
+        continue;
+      }
+      
+      // Check HOP on current row pointing to same row
+      uint8_t fxType = p->tables[table->tableIdx].rows[row].fx[i][0];
+      uint8_t fxValue = p->tables[table->tableIdx].rows[row].fx[i][1];
+      
+      if (fxType == fxHOP && (fxValue & 0xf) == row) {
         if (fxValue & 0xf0) {
           // Loop counter
-          table->fxAuxState[table->rows[i]][i]++;
-          if (table->fxAuxState[table->rows[i]][i] <= ((fxValue & 0xf0) >> 4)) {
-            shouldProgress = 0;
+          table->fxAuxState[row][i]++;
+          if (table->fxAuxState[row][i] <= ((fxValue & 0xf0) >> 4)) {
+            tableReadFX(state, trackIdx, table, i, 0);
+            continue;
           }
         } else {
-          // Unconditional loop on same row
-          shouldProgress = 0;
+          // Unconditional hop to same row - stay here
+          tableReadFX(state, trackIdx, table, i, 0);
+          continue;
         }
       }
-
-      if (shouldProgress) {
-        // Progres further in the table
-        table->rows[i] = (table->rows[i] + 1) & 15;
-        uint8_t row = table->rows[i];
-
-        if (row == 0) {
-          // Reset all loop counters
-          for (int c = 0; c < 16; c++) {
-            table->fxAuxState[c][i] = 0;
-          }
+      
+      // Progress to next row
+      table->rows[i] = (row + 1) & 15;
+      
+      if (table->rows[i] == 0) {
+        // Reset all loop counters for this column
+        for (int c = 0; c < 16; c++) {
+          table->fxAuxState[c][i] = 0;
         }
+      }
+      
+      row = table->rows[i];
 
-        // Handle THO and HOP table FX
-        fxType = p->tables[table->tableIdx].rows[row].fx[i][0];
-        fxValue = p->tables[table->tableIdx].rows[row].fx[i][1];
-        if (fxType == fxTHO) {
-          // THO: Hop on all FX lanes
-          hopToTableRow(state, trackIdx, table, fxValue & 0xf);
+      // Check if any column has THO on new row
+      thoTarget = -1;
+      for (int col = 0; col < 4; col++) {
+        if (p->tables[table->tableIdx].rows[row].fx[col][0] == fxTHO) {
+          thoTarget = p->tables[table->tableIdx].rows[row].fx[col][1] & 0xf;
           break;
-        } else if (fxType == fxHOP) {
-          // HOP: Hop only on the current lane
-          if (fxValue & 0xf0) {
-            // Loop counter
-            table->fxAuxState[table->rows[i]][i]++;
-            if (table->fxAuxState[table->rows[i]][i] <= ((fxValue & 0xf0) >> 4)) {
-              // Reset "nested" loops. Works only when hopping back
-              for (int c = fxValue & 0xf; c < table->rows[i]; c++) {
+        }
+      }
+      
+      if (thoTarget >= 0) {
+        // THO found - hop this column
+        table->rows[i] = thoTarget;
+        tableReadFX(state, trackIdx, table, i, 0);
+        continue;
+      }
+
+      // Check HOP on new row
+      fxType = p->tables[table->tableIdx].rows[row].fx[i][0];
+      fxValue = p->tables[table->tableIdx].rows[row].fx[i][1];
+      
+      if (fxType == fxHOP) {
+        uint8_t hopTarget = fxValue & 0xf;
+        if (fxValue & 0xf0) {
+          // Loop counter
+          table->fxAuxState[row][i]++;
+          if (table->fxAuxState[row][i] <= ((fxValue & 0xf0) >> 4)) {
+            // Reset "nested" loops when hopping back
+            if (hopTarget < row) {
+              for (int c = hopTarget; c < row; c++) {
                 table->fxAuxState[c][i] = 0;
               }
-              table->rows[i] = fxValue & 0xf;
             }
-          } else {
-            table->rows[i] = fxValue & 0xf;
+            table->rows[i] = hopTarget;
+            tableReadFX(state, trackIdx, table, i, 0);
+            continue;
           }
+        } else {
+          // Unconditional hop
+          table->rows[i] = hopTarget;
+          tableReadFX(state, trackIdx, table, i, 0);
+          continue;
         }
       }
+      
+      // No hop - read FX from current row
       tableReadFX(state, trackIdx, table, i, 0);
     }
   }
@@ -435,6 +466,16 @@ static int moveToNextPhraseRow(PlaybackState* state, int trackIdx) {
   struct Project *p = state->p;
   PlaybackTrackState* track = &state->tracks[trackIdx];
 
+  // Check phrase-level loop before incrementing
+  if (state->loopRange.enabled && state->loopRange.level == 2 && track->loop &&
+      track->songRow == state->loopRange.endSongRow &&
+      track->chainRow == state->loopRange.endChainRow &&
+      track->phraseRow == state->loopRange.endPhraseRow) {
+    track->phraseRow = state->loopRange.startPhraseRow;
+    resetTrackFXAuxState(state, trackIdx);
+    return stopped;
+  }
+
   track->phraseRow++;
 
   // Reset OFF/KIL/DEL FX
@@ -446,6 +487,17 @@ static int moveToNextPhraseRow(PlaybackState* state, int trackIdx) {
 
   if (track->phraseRow >= 16) {
     track->phraseRow = 0;
+    
+    // Check chain-level loop after phrase overflow
+    if (state->loopRange.enabled && state->loopRange.level == 1 && track->loop &&
+        track->songRow == state->loopRange.endSongRow &&
+        track->chainRow == state->loopRange.endChainRow) {
+      track->chainRow = state->loopRange.startChainRow;
+      track->phraseRow = state->loopRange.startPhraseRow;
+      resetTrackFXAuxState(state, trackIdx);
+      return stopped;
+    }
+    
     // Play mode logic:
     // Song playback
     if (track->mode == playbackModeSong) {
@@ -454,6 +506,16 @@ static int moveToNextPhraseRow(PlaybackState* state, int trackIdx) {
       if (chain != EMPTY_VALUE_16) {
         int chainRow = track->chainRow + 1;
         if (chainRow >= 16 || p->chains[chain].rows[chainRow].phrase == EMPTY_VALUE_16) {
+          // Check song-level loop before advancing song row
+          if (state->loopRange.enabled && state->loopRange.level == 0 && track->loop &&
+              track->songRow == state->loopRange.endSongRow) {
+            track->songRow = state->loopRange.startSongRow;
+            track->chainRow = state->loopRange.startChainRow;
+            track->phraseRow = state->loopRange.startPhraseRow;
+            resetTrackFXAuxState(state, trackIdx);
+            return stopped;
+          }
+          
           // Next song row
           int songRow = track->songRow + 1;
           track->chainRow = 0;
@@ -550,6 +612,9 @@ void playbackInit(PlaybackState* state, Project* project) {
     state->trackEnabled[c] = 1;
   }
 
+  // Initialize loop range as disabled
+  state->loopRange.enabled = 0;
+
   // TODO: Properly initialize other global chip states, but for now it's AY only
   for (int c = 0; c < PROJECT_MAX_CHIPS; c++) {
     state->chips[c].ay.envShape = 0;
@@ -623,6 +688,8 @@ void playbackQueuePhrase(PlaybackState* state, int trackIdx, int songRow, int ch
   PlaybackTrackState* track = &state->tracks[trackIdx];
   if (track->mode != playbackModePhrase) return;
   if (track->songRow != songRow) return;
+  // Ignore queued phrases when ranged loop is enabled
+  if (state->loopRange.enabled) return;
   track->queue.mode = playbackModePhrase;
   track->queue.songRow = songRow;
   track->queue.chainRow = chainRow;
@@ -744,4 +811,12 @@ void playbackStopPreview(PlaybackState* state, int trackIdx) {
   if (state->tracks[trackIdx].mode == playbackModePhraseRow) {
     resetTrack(state, trackIdx);
   }
+}
+
+void playbackSetLoopRange(PlaybackState* state, LoopRange range) {
+  state->loopRange = range;
+}
+
+void playbackClearLoopRange(PlaybackState* state) {
+  state->loopRange.enabled = 0;
 }
