@@ -503,6 +503,23 @@ int gfxGetCharHeight(void) {
     return fontH;
 }
 
+void gfxReloadFont(void) {
+    if (fontTexture) {
+        SDL_DestroyTexture(fontTexture);
+        fontTexture = NULL;
+    }
+
+    selectFont();
+
+    const int textWindowW = TEXT_COLS * fontPixelW;
+    const int textWindowH = TEXT_ROWS * fontH;
+    offsetX = (BACKBUFFER_W - textWindowW) / 2;
+    offsetY = (BACKBUFFER_H - textWindowH) / 2;
+
+    createFontTexture();
+    isDirty = 1;
+}
+
 // Modify gfxUpdateScreen to copy back buffer to screen:
 void gfxUpdateScreen(void) {
     if (!isDirty) {

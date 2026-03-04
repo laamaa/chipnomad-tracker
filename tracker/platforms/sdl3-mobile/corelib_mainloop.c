@@ -3,6 +3,7 @@
 #include <SDL3/SDL.h>
 
 #include "corelib_gfx.h"
+#include "corelib_input.h"
 #include "virtual_buttons.h"
 #include "haptic_feedback.h"
 #include "resource_init.h"
@@ -117,6 +118,9 @@ void mainLoopRun(void (*draw)(void), void (*onEvent)(enum MainLoopEvent event, i
         if (event.key.key == BTN_MENU) {
           menu = event.type == SDL_EVENT_KEY_DOWN;
         } else {
+          if (inputRawCallback) {
+            inputRawCallback(event.key.key, event.type == SDL_EVENT_KEY_DOWN);
+          }
           enum Key key = decodeKey(event.key.key);
           if (key != -1 ) onEvent(event.type == SDL_EVENT_KEY_DOWN ? eventKeyDown : eventKeyUp, key, NULL);
         }
