@@ -49,7 +49,7 @@ endif()
 # Mobile build option
 option(MOBILE_BUILD "Enable mobile build" OFF)
 if(MOBILE_BUILD)
-    add_definitions(-DMOBILE_BUILD)
+    add_definitions(-DMOBILE_BUILD -DMOBILE_LIFECYCLE -DTOUCH_INPUT -DGAMEPAD_SUPPORT)
 endif()
 
 # Source directories
@@ -60,6 +60,7 @@ set(COMMON_LIBS_DIRS
     chipnomad_lib/external/ayumi
     chipnomad_lib/export
     chipnomad_lib/corelib_file_stdio
+    chipnomad_lib/corelib
     tracker/src/corelib
     tracker/src/import
     tracker/src/screens

@@ -520,6 +520,19 @@ void gfxReloadFont(void) {
     isDirty = 1;
 }
 
+void gfxDrawHUD(void) {
+    gfxDrawVirtualButtons();
+}
+
+void gfxSetButtonPressed(int buttonIndex, int pressed) {
+    VirtualButtonRegion *regions = virtualButtonsGetRegions();
+    int numRegions = virtualButtonsGetNumRegions();
+    if (buttonIndex >= 0 && buttonIndex < numRegions && regions) {
+        regions[buttonIndex].isPressed = pressed;
+        isDirty = 1;
+    }
+}
+
 // Modify gfxUpdateScreen to copy back buffer to screen:
 void gfxUpdateScreen(void) {
     if (!isDirty) {
@@ -527,7 +540,7 @@ void gfxUpdateScreen(void) {
     }
 
     // Draw virtual buttons overlay onto its own texture
-    gfxDrawVirtualButtons();
+    gfxDrawHUD();
 
     // Set render target to screen (NULL = default render target)
     SDL_SetRenderTarget(renderer, NULL);

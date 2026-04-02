@@ -4,9 +4,7 @@
 #include <string.h>
 #include <locale.h>
 #include <ctype.h>
-
-// Callback for raw input capture
-void (*inputRawCallback)(int32_t keyCode, int isDown) = NULL;
+#include "corelib_keymap.h"
 
 // Keyboard layout detection (only used for first-launch default key mapping)
 typedef enum {
@@ -53,43 +51,44 @@ static KeyboardLayout detectKeyboardLayout(void) {
 }
 
 void inputInitDefaultKeyMapping(void) {
-#if defined(DESKTOP_BUILD) || defined(PORTMASTER_BUILD)
   KeyboardLayout layout = detectKeyboardLayout();
 
-  appSettings.keyMapping.keyUp[0] = SDLK_UP;
-  appSettings.keyMapping.keyUp[1] = 0;
-  appSettings.keyMapping.keyUp[2] = 0;
-  appSettings.keyMapping.keyDown[0] = SDLK_DOWN;
-  appSettings.keyMapping.keyDown[1] = 0;
-  appSettings.keyMapping.keyDown[2] = 0;
-  appSettings.keyMapping.keyLeft[0] = SDLK_LEFT;
-  appSettings.keyMapping.keyLeft[1] = 0;
-  appSettings.keyMapping.keyLeft[2] = 0;
-  appSettings.keyMapping.keyRight[0] = SDLK_RIGHT;
-  appSettings.keyMapping.keyRight[1] = 0;
-  appSettings.keyMapping.keyRight[2] = 0;
-  appSettings.keyMapping.keyOpt[0] = (layout == LAYOUT_QWERTZ) ? SDLK_Y : SDLK_Z;
-  appSettings.keyMapping.keyOpt[1] = 0;
-  appSettings.keyMapping.keyOpt[2] = 0;
-  appSettings.keyMapping.keyPlay[0] = SDLK_SPACE;
-  appSettings.keyMapping.keyPlay[1] = 0;
-  appSettings.keyMapping.keyPlay[2] = 0;
-  appSettings.keyMapping.keyShift[0] = SDLK_LSHIFT;
-  appSettings.keyMapping.keyShift[1] = 0;
-  appSettings.keyMapping.keyShift[2] = 0;
-  appSettings.keyMapping.keyEdit[0] = SDLK_X;
-  appSettings.keyMapping.keyEdit[1] = 0;
-  appSettings.keyMapping.keyEdit[2] = 0;
-#else
-  memset(&appSettings.keyMapping, 0, sizeof(KeyMapping));
-#endif
+  // Keyboard mappings (slot 0)
+  appSettings.keyMapping.keyUp[0] = (InputCode){inputKeyboard, BTN_UP};
+  appSettings.keyMapping.keyDown[0] = (InputCode){inputKeyboard, BTN_DOWN};
+  appSettings.keyMapping.keyLeft[0] = (InputCode){inputKeyboard, BTN_LEFT};
+  appSettings.keyMapping.keyRight[0] = (InputCode){inputKeyboard, BTN_RIGHT};
+  appSettings.keyMapping.keyOpt[0] = (InputCode){inputKeyboard, (layout == LAYOUT_QWERTZ) ? SDLK_Y : BTN_B};
+  appSettings.keyMapping.keyPlay[0] = (InputCode){inputKeyboard, BTN_START};
+  appSettings.keyMapping.keyShift[0] = (InputCode){inputKeyboard, BTN_SELECT};
+  appSettings.keyMapping.keyEdit[0] = (InputCode){inputKeyboard, BTN_A};
+
+  // Gamepad mappings (slot 1)
+  appSettings.keyMapping.keyUp[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_DPAD_UP};
+  appSettings.keyMapping.keyDown[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_DPAD_DOWN};
+  appSettings.keyMapping.keyLeft[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT};
+  appSettings.keyMapping.keyRight[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT};
+  appSettings.keyMapping.keyEdit[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_SOUTH};
+  appSettings.keyMapping.keyOpt[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_EAST};
+  appSettings.keyMapping.keyPlay[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_START};
+  appSettings.keyMapping.keyShift[1] = (InputCode){inputGamepad, SDL_GAMEPAD_BUTTON_BACK};
+
+  // Slot 2 empty
+  appSettings.keyMapping.keyUp[2] = (InputCode){inputNone, 0};
+  appSettings.keyMapping.keyDown[2] = (InputCode){inputNone, 0};
+  appSettings.keyMapping.keyLeft[2] = (InputCode){inputNone, 0};
+  appSettings.keyMapping.keyRight[2] = (InputCode){inputNone, 0};
+  appSettings.keyMapping.keyEdit[2] = (InputCode){inputNone, 0};
+  appSettings.keyMapping.keyOpt[2] = (InputCode){inputNone, 0};
+  appSettings.keyMapping.keyPlay[2] = (InputCode){inputNone, 0};
+  appSettings.keyMapping.keyShift[2] = (InputCode){inputNone, 0};
 }
 
-const char* inputGetKeyName(int32_t keyCode) {
-  if (keyCode == 0) return "---";
+const char* inputGetKeyName(InputCode input) {
+  if (input.deviceType == inputNone) return "---";
 
-  if (keyCode < 0) {
-    switch (-keyCode) {
+  if (input.deviceType == inputGamepad) {
+    switch (input.code) {
       case SDL_GAMEPAD_BUTTON_SOUTH: return "Pad A";
       case SDL_GAMEPAD_BUTTON_EAST: return "Pad B";
       case SDL_GAMEPAD_BUTTON_WEST: return "Pad X";
@@ -107,7 +106,7 @@ const char* inputGetKeyName(int32_t keyCode) {
   }
 
   // Keyboard - custom short names for common keys
-  switch (keyCode) {
+  switch (input.code) {
     case SDLK_LSHIFT: return "LShift";
     case SDLK_RSHIFT: return "RShift";
     case SDLK_LCTRL: return "LCtrl";
@@ -120,7 +119,7 @@ const char* inputGetKeyName(int32_t keyCode) {
     case SDLK_ESCAPE: return "Escape";
   }
 
-  const char* name = SDL_GetKeyName(keyCode);
+  const char* name = SDL_GetKeyName(input.code);
   if (name && name[0]) return name;
 
   return "???";

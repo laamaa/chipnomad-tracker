@@ -292,7 +292,7 @@ FileEntry* fileListDirectory(const char* path, const char* extension, int* entry
   return ctx.entries;
 }
 
-int fileGetCurrentDirectory(char* buffer, int bufferSize) {
+int fileGetDefaultDirectory(char* buffer, int bufferSize) {
   const char* docsPath = getDocumentsPath();
   SDL_strlcpy(buffer, docsPath, bufferSize);
   return 0;
