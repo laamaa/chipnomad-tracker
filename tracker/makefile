@@ -38,6 +38,10 @@ RG35xx RG35xx-deploy:
 PortMaster PortMaster-deploy:
 	$(MAKE) -f Makefile.portmaster $@
 
+.PHONY: MiyooPorts MiyooPorts-deploy
+MiyooPorts MiyooPorts-deploy:
+	$(MAKE) -f Makefile.miyooports $@
+
 .PHONY: macOS macOS-deploy
 macOS macOS-deploy:
 	$(MAKE) -f Makefile.macos $@
@@ -45,6 +49,17 @@ macOS macOS-deploy:
 .PHONY: windows-deploy
 windows-deploy:
 	$(MAKE) -f Makefile.windows windows-deploy
+
+.PHONY: android android-apk
+android:
+	$(MAKE) -f Makefile.android android
+
+android-apk:
+	@echo "Building Android APK..."
+	$(MAKE) -f Makefile.android android
+	cd platforms/android && ~/Library/Android/sdk/tools/bin/sdkmanager --install "build-tools;34.0.0" || true
+	cd platforms/android && ANDROID_HOME=~/Library/Android/sdk ~/Library/Android/sdk/tools/bin/sdkmanager --list | head -20
+	@echo "Use Android Studio to build APK or install Gradle manually"
 
 .PHONY: linux-package linux-package-deploy
 linux-package:
@@ -55,6 +70,10 @@ linux-package-deploy: linux-package
 	@mv build/linux/ChipNomad-*-Linux-*.tar.gz ../../releases/ 2>/dev/null && \
 		echo "Linux package moved to ../../releases/" || \
 		(echo "Error: Package not found in build/linux/"; exit 1)
+
+.PHONY: clean-android
+clean-android:
+	rm -rf build/android-arm64 build/android-arm32
 
 .PHONY: deploy-all
 deploy-all:
@@ -76,6 +95,9 @@ clean-rg35xx:
 
 clean-portmaster:
 	rm -rf build/portmaster
+
+clean-miyooports:
+	rm -rf build/miyoports
 
 clean-macOS:
 	rm -rf build/macos

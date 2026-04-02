@@ -20,7 +20,7 @@ static void settingsDrawField(int col, int row, int state);
 static int settingsOnEdit(int col, int row, enum CellEditAction action);
 
 static ScreenData screenSettingsData = {
-  .rows = 8,
+  .rows = 7,
   .cursorRow = 0,
   .cursorCol = 0,
   .selectMode = -1,
@@ -43,7 +43,7 @@ static void fontLoadCallback(const char* path) {
     gfxReloadFont();
     strncpy(appSettings.fontPath, path, PATH_LENGTH);
     appSettings.fontPath[PATH_LENGTH] = 0;
-    
+
     // Extract folder path
     char* lastSeparator = strrchr(path, PATH_SEPARATOR);
     if (lastSeparator) {
@@ -53,7 +53,7 @@ static void fontLoadCallback(const char* path) {
         appSettings.fontFolderPath[pathLen] = '\0';
       }
     }
-    
+
     screenMessage(MESSAGE_TIME, "Loaded: %s", font->name);
   } else {
     screenMessage(MESSAGE_TIME, "Failed to load font");
@@ -91,14 +91,12 @@ void settingsDrawCursor(int col, int row) {
   } else if (row == 2 && col == 0) {
     gfxCursor(23, 4, 6);
   } else if (row == 3 && col == 0) {
-    gfxCursor(23, 5, 3);
+    gfxCursor(0, 5, 11);
   } else if (row == 4 && col == 0) {
-    gfxCursor(0, 6, 11);
+    gfxCursor(0, 6, 9);
   } else if (row == 5 && col == 0) {
-    gfxCursor(0, 7, 9);
+    gfxCursor(0, 7, 16);
   } else if (row == 6 && col == 0) {
-    gfxCursor(0, 8, 16);
-  } else if (row == 7 && col == 0) {
     gfxCursor(0, 17, 14);
   }
 }
@@ -128,20 +126,15 @@ void settingsDrawField(int col, int row, int state) {
     const char* qualityNames[] = {"LOW   ", "MEDIUM", "HIGH  ", "BEST  "};
     gfxPrint(23, 4, qualityNames[appSettings.quality]);
   } else if (row == 3 && col == 0) {
-    gfxSetFgColor(appSettings.colorScheme.textDefault);
-    gfxPrint(0, 5, "Gamepad swap A/B");
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
-    gfxPrint(23, 5, appSettings.gamepadSwapAB ? "ON " : "OFF");
+    gfxPrint(0, 5, "Key mapping");
   } else if (row == 4 && col == 0) {
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
-    gfxPrint(0, 6, "Key mapping");
+    gfxPrint(0, 6, "Load font");
   } else if (row == 5 && col == 0) {
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
-    gfxPrint(0, 7, "Load font");
+    gfxPrint(0, 7, "Edit color theme");
   } else if (row == 6 && col == 0) {
-    gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
-    gfxPrint(0, 8, "Edit color theme");
-  } else if (row == 7 && col == 0) {
     gfxSetFgColor(state == stateFocus ? appSettings.colorScheme.textValue : appSettings.colorScheme.textDefault);
     gfxPrint(0, 17, "Quit ChipNomad");
   }
@@ -150,8 +143,7 @@ void settingsDrawField(int col, int row, int state) {
 int settingsOnEdit(int col, int row, enum CellEditAction action) {
   if (row == 0 && col == 0) {
     // Pitch conflict warning (0/1)
-    static uint8_t lastValue = 0;
-    return edit8withLimit(action, (uint8_t*)&appSettings.pitchConflictWarning, &lastValue, 1, 1);
+    return edit8noLast(action, (uint8_t*)&appSettings.pitchConflictWarning, 1, 0, 1);
   } else if (row == 1 && col == 0) {
     // Mix volume (1-100%)
     int mixVolumePercent = (int)(appSettings.mixVolume * 100.0f + 0.5f);
@@ -166,31 +158,24 @@ int settingsOnEdit(int col, int row, enum CellEditAction action) {
     return handled;
   } else if (row == 2 && col == 0) {
     // Quality (0-3)
-    static uint8_t lastValue = 0;
-    int handled = edit8withLimit(action, (uint8_t*)&appSettings.quality, &lastValue, 1, 3);
-    if (handled && chipnomadState) {
+    int handled = edit8noLast(action, (uint8_t*)&appSettings.quality, 1, 0, 3);
+    if (handled) {
       chipnomadSetQuality(chipnomadState, appSettings.quality);
     }
     return handled;
-  } else if (row == 3 && col == 0) {
-    // Gamepad swap A/B (0/1)
-    static uint8_t lastValue = 0;
-    return edit8withLimit(action, (uint8_t*)&appSettings.gamepadSwapAB, &lastValue, 1, 1);
-  } else if (row == 4 && col == 0 && action == editTap) {
-#if defined(DESKTOP_BUILD) || defined(PORTMASTER_BUILD)
+  } else if (row == 3 && col == 0 && action == editTap) {
     screenSetup(&screenKeyMapping, 0);
-#endif
     return 0;
-  } else if (row == 5 && col == 0 && action == editTap) {
-    fileBrowserSetup("LOAD FONT", ".cnfont", appSettings.fontFolderPath, 
-      (void (*)(const char*))fontLoadCallback, 
+  } else if (row == 4 && col == 0 && action == editTap) {
+    fileBrowserSetup("LOAD FONT", ".cnfont", appSettings.fontFolderPath,
+      (void (*)(const char*))fontLoadCallback,
       (void (*)(void))fontCancelCallback);
     screenSetup(&screenFileBrowser, 0);
     return 0;
-  } else if (row == 6 && col == 0 && action == editTap) {
+  } else if (row == 5 && col == 0 && action == editTap) {
     screenSetup(&screenColorTheme, 0);
     return 0;
-  } else if (row == 7 && col == 0 && action == editTap) {
+  } else if (row == 6 && col == 0 && action == editTap) {
     // Trigger exit event
     mainLoopTriggerQuit();
     return 1;

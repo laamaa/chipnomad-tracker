@@ -35,3 +35,7 @@ int main(int argv, char** args) {
 
   return 0;
 }
+
+int SDL_main(int argv, char** args) {
+  return main(argv, args);
+}

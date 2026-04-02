@@ -16,3 +16,5 @@ convert_commands.sh
 /font-generator/fonts
 /website/hugo/public/
 /website/hugo/resources/_gen/
+libchipnomad.so
+tracker/platforms/android/app/src/main/assets/chipnomad_data
