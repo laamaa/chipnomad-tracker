@@ -20,7 +20,6 @@ typedef struct PlaybackTableState {
   uint8_t rows[4];
   uint8_t counters[4];
   uint8_t speed[4];
-  PlaybackFXState fx[4];
   uint8_t fxAuxState[16][4];
 } PlaybackTableState;
 
@@ -36,12 +35,11 @@ typedef struct PlaybackAYNoteState {
   uint8_t envShape;
   uint16_t envBase;
   int16_t envOffset;
-  int16_t envOffsetAcc;
   uint8_t noiseBase;
-  int8_t noiseOffsetAcc;
+  int8_t noiseOffset;
 } PlaybackAYNoteState;
 
-typedef struct PlaybackChipNoteState {
+typedef union PlaybackChipNoteState {
   PlaybackAYNoteState ay;
 } PlaybackChipNoteState;
 
@@ -51,19 +49,17 @@ typedef struct PlaybackNoteState {
   uint8_t volume;
 
   uint8_t noteFinal; // Calculated value
-  int8_t noteOffset; // Re-calculated each frame
-  int8_t noteOffsetAcc; // Accumulated over time
-  int16_t pitchOffset; // Re-calculated each frame
-  int16_t pitchOffsetAcc; // Accumulated over time
-  int16_t periodOffsetAcc; // Accumulated period offset
+  int8_t noteOffset; // Note offset
+  int16_t pitchOffset; // Pitch offset
+  int16_t periodOffset; // Period offset
   uint8_t volume1; // Instrument volume
   uint8_t volume2; // Instrument table volume
   uint8_t volume3; // Aux table volume
-  int8_t volumeOffsetAcc; // Accumulated over time
+  int8_t volumeOffset; // Volume offset
 
   PlaybackTableState instrumentTable;
   PlaybackTableState auxTable;
-  PlaybackFXState fx[3];
+  PlaybackFXState fx[256]; // Active FX on this note, indexed by FX enum
 
   PlaybackChipNoteState chip;
 } PlaybackNoteState;
@@ -75,26 +71,6 @@ typedef struct PlaybackTrackQueue {
   int phraseRow;
   int loop;
 } PlaybackTrackQueue;
-
-enum PlaybackArpType {
-  arpTypeUp,
-  arpTypeDown,
-  arpTypeUpDown,
-  arpTypeUp1Oct,
-  arpTypeDown1Oct,
-  arpTypeUpDown1Oct,
-  arpTypeUp2Oct,
-  arpTypeDown2Oct,
-  arpTypeUpDown2Oct,
-  arpTypeUp3Oct,
-  arpTypeDown3Oct,
-  arpTypeUpDown3Oct,
-  arpTypeUp4Oct,
-  arpTypeDown4Oct,
-  arpTypeUpDown4Oct,
-  arpTypeUp5Oct,
-  arpTypeMax,
-};
 
 typedef struct PlaybackTrackState {
   PlaybackTrackQueue queue;
@@ -113,14 +89,11 @@ typedef struct PlaybackTrackState {
 
   int frameCounter;
 
-  int arpSpeed;
-  enum PlaybackArpType arpType;
-
   // Currently playing note
   PlaybackNoteState note;
   // Cached phrase row data
   PhraseRow currentPhraseRow;
-  // FX auxillary state data
+  // FX auxillary state data for the phrase (used by HOP)
   uint8_t fxAuxState[16][3];
 } PlaybackTrackState;
 
@@ -128,7 +101,7 @@ typedef struct PlaybackAYChipState {
   uint8_t envShape;
 } PlaybackAYChipState;
 
-typedef struct PlaybackChipState {
+typedef union PlaybackChipState {
   PlaybackAYChipState ay;
 } PlaybackChipState;
 
@@ -151,6 +124,35 @@ typedef struct PlaybackState {
   LoopRange loopRange;
 } PlaybackState;
 
+// FX typedefs
+typedef void (*PlaybackFXInitFunc)(
+  PlaybackState* state,
+  PlaybackTrackState* track,
+  int trackIdx,
+  PlaybackFXState* fx,
+  PlaybackTableState* tableState,
+  int tableFXColumn,
+  int forceCleanState
+);
+typedef void (*PlaybackFXRestartFunc)(
+  PlaybackState* state,
+  PlaybackTrackState* track,
+  int trackIdx,
+  PlaybackFXState* fx
+);
+typedef void (*PlaybackFXHandleFunc)(
+  PlaybackState* state,
+  PlaybackTrackState* track,
+  int trackIdx,
+  int chipIdx,
+  PlaybackFXState* fx
+);
+
+typedef struct PlaybackFXHandler {
+  PlaybackFXInitFunc init;
+  PlaybackFXHandleFunc handle;
+  PlaybackFXRestartFunc restart;
+} PlaybackFXHandler;
 
 /**
  * Initializes the playback state with the given project
@@ -236,8 +238,6 @@ void playbackStop(PlaybackState* state);
  * @param instrument Instrument to use
  */
 void playbackPreviewNote(PlaybackState* state, int trackIdx, uint8_t note, uint8_t instrument);
-
-
 
 /**
  * Stops preview playback on a specific track

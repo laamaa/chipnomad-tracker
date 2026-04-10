@@ -1,31 +1,56 @@
 #ifndef __PLAYBACK_FX_H__
 #define __PLAYBACK_FX_H__
 
-typedef struct PlaybackFXData_PBN {
-  int value;
-  uint8_t lowByte;
-} PlaybackFXData_PBN;
+enum PlaybackArpType {
+  arpTypeUp,
+  arpTypeDown,
+  arpTypeUpDown,
+  arpTypeUp1Oct,
+  arpTypeDown1Oct,
+  arpTypeUpDown1Oct,
+  arpTypeUp2Oct,
+  arpTypeDown2Oct,
+  arpTypeUpDown2Oct,
+  arpTypeUp3Oct,
+  arpTypeDown3Oct,
+  arpTypeUpDown3Oct,
+  arpTypeUp4Oct,
+  arpTypeDown4Oct,
+  arpTypeUpDown4Oct,
+  arpTypeUp5Oct,
+  arpTypeMax,
+};
 
-typedef struct PlaybackFXData_CountFX {
-  uint8_t counter;
-} PlaybackFXData_CountFX;
+typedef struct PlaybackFXData_Bend {
+  int speed;
+} PlaybackFXData_Bend;
 
-typedef struct PlaybackFXData_PSL {
+typedef struct PlaybackFXData_Slide {
   int16_t startPeriod;
   int16_t endPeriod;
-  uint8_t counter;
-} PlaybackFXData_PSL;
+} PlaybackFXData_Slide;
 
-typedef union PlaybackFXData {
-  PlaybackFXData_PBN pbn;
-  PlaybackFXData_CountFX count_fx;
-  PlaybackFXData_PSL psl;
-} PlaybackFXData;
+typedef struct PlaybackFXData_Arpeggio {
+  int speed;
+  enum PlaybackArpType type;
+} PlaybackFXData_Arpeggio;
+
+typedef struct PlaybackFXData_Retrigger {
+  PhraseRow row;
+  int counter;
+} PlaybackFXData_Retrigger;
 
 typedef struct PlaybackFXState {
-  uint8_t fx;
-  uint8_t value;
-  PlaybackFXData data;
+  uint8_t isOn;
+  uint8_t fxValue;
+  int counter;
+  int acc;
+  union {
+    PlaybackFXData_Bend bend;
+    PlaybackFXData_Slide slide;
+    PlaybackFXData_Arpeggio arpeggio;
+    PlaybackFXData_Retrigger retrigger;
+  } d;
 } PlaybackFXState;
 
 #endif
